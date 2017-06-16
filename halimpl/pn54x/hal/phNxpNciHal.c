@@ -3321,11 +3321,15 @@ retrySetclock:
     phNxpNciClock.isClockSet = TRUE;
     if (nxpprofile_ctrl.bClkSrcVal == CLK_SRC_PLL)
     {
-        static uint8_t set_clock_cmd[] = {0x20, 0x02,0x09, 0x02, 0xA0, 0x03, 0x01, 0x11,
-                                                               0xA0, 0x04, 0x01, 0x01};
 #if(NFC_NXP_CHIP_TYPE == PN553)
+        static uint8_t set_clock_cmd[] = {0x20,0x02, 0x1F, 0x04, 0xA0, 0x03, 0x01, 0x11,
+                                                                 0xA0, 0x04, 0x01, 0x01,
+                                                                 0xA0, 0x20, 0x08, 0x88, 0x51, 0xE3,0x02, 0xB8, 0x21, 0xE1, 0x02,
+                                                                 0xA0, 0x26, 0x08, 0x88, 0x01, 0xE2,0x02, 0xF0, 0x00, 0xA2, 0x01};
         uint8_t param_clock_src = 0x00;
 #else
+        static uint8_t set_clock_cmd[] = {0x20, 0x02,0x09, 0x02, 0xA0, 0x03, 0x01, 0x11,
+                                                               0xA0, 0x04, 0x01, 0x01};
         uint8_t param_clock_src = CLK_SRC_PLL;
         param_clock_src = param_clock_src << 3;
 #endif
@@ -3333,26 +3337,57 @@ retrySetclock:
         if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_13MHZ)
         {
             param_clock_src |= 0x00;
+#if(NFC_NXP_CHIP_TYPE == PN553)
+            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x08, 0x52, 0xA2, 0x02, 0x30, 0x01, 0xE1, 0x02,
+                                       0xA0, 0x26, 0x08, 0x40, 0x42, 0xA3, 0x02, 0x88, 0x01, 0xE2, 0x02};
+            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
+#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_19_2MHZ)
         {
             param_clock_src |= 0x01;
+#if(NFC_NXP_CHIP_TYPE == PN553)
+            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x88, 0x51, 0xE3, 0x02, 0xB8, 0x21, 0xE1, 0x02,
+                                       0xA0, 0x26, 0x08, 0x88, 0x01, 0xE2, 0x02, 0xF0, 0x00, 0xA2, 0x01};
+            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
+#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_24MHZ)
         {
             param_clock_src |= 0x02;
+#if(NFC_NXP_CHIP_TYPE == PN553)
+            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x28, 0xC2, 0xA2, 0x83, 0x88, 0x11, 0xE1, 0x02,
+                                       0xA0, 0x26, 0x08, 0x38, 0x41, 0xD3, 0x02, 0x88, 0x01, 0xE2, 0x02};
+            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
+#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_26MHZ)
         {
             param_clock_src |= 0x03;
+
+#if(NFC_NXP_CHIP_TYPE == PN553)
+            char tmp_pllclock_cmd[] = {0xA0, 0x26, 0x08, 0x20, 0x41, 0xA3, 0x01, 0x88, 0x01, 0xE2, 0x02,
+                                       0xA0, 0x20, 0x08, 0x08, 0x52, 0xA2, 0x82, 0x30, 0x01, 0xE1, 0x02};
+            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
+#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_38_4MHZ)
         {
             param_clock_src |= 0x04;
+#if(NFC_NXP_CHIP_TYPE == PN553)
+            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x88, 0x51, 0xE3, 0x82, 0x88, 0x21, 0xE1, 0x02,
+                                       0xA0, 0x26, 0x08, 0x88, 0x01, 0xE2, 0x82, 0xF0, 0x00, 0xA2, 0x01};
+            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
+#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_52MHZ)
         {
             param_clock_src |= 0x05;
+#if(NFC_NXP_CHIP_TYPE == PN553)
+            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x08, 0xD1, 0xA1, 0x81, 0x08, 0x21, 0xE1, 0x02,
+                                       0xA0, 0x26, 0x08, 0x38, 0x41, 0xA3, 0x81, 0x88, 0x01, 0xE2, 0x02};
+            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
+#endif
         }
         else
         {
@@ -3418,8 +3453,8 @@ NFCSTATUS phNxpNciHal_check_clock_config(void)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
     uint8_t param_clock_src;
-    static uint8_t get_clock_cmd[] = {0x20, 0x03,0x07, 0x03, 0xA0, 0x02,
-            0xA0, 0x03, 0xA0, 0x04};
+    static uint8_t get_clock_cmd[] = {0x20, 0x03,0x0B, 0x05, 0xA0, 0x02,
+            0xA0, 0x03, 0xA0, 0x04 ,0xA0, 0x20, 0xA0 , 0x26};
     phNxpNciClock.isClockSet = TRUE;
     phNxpNciHal_get_clk_freq();
     status = phNxpNciHal_send_ext_cmd(sizeof(get_clock_cmd),get_clock_cmd);
