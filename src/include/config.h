@@ -160,6 +160,7 @@ int GetNumValue(const char* name, void* p_value, unsigned long len);
 #if (NXP_WIRED_MODE_STANDBY == TRUE)
 #define NAME_NXP_ESE_POWER_DH_CONTROL                 "NXP_ESE_POWER_DH_CONTROL"
 #endif
+#define NAME_NXP_EMVCO_POLL_PROFILE                   "NXP_EMVCO_POLL_PROFILE"
 #endif
 
 #define                     LPTD_PARAM_LEN (40)

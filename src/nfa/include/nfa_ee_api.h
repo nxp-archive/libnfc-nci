@@ -119,6 +119,8 @@ typedef UINT8 tNFA_EE_MD;
 #define NFA_EE_PWR_STATE_ON         0x01    /* The device is on                 */
 #define NFA_EE_PWR_STATE_SWITCH_OFF 0x02    /* The device is switched off       */
 #define NFA_EE_PWR_STATE_BATT_OFF   0x04    /* The device's battery is removed  */
+#define NFA_EE_PWR_STATE_SCREEN_OFF 0x08    /* The device's screen is off  */
+#define NFA_EE_PWR_STATE_SCREEN_LOCK 0x10    /* The device's screen is locked  */
 #define NFA_EE_PWR_STATE_NONE       0       /* used to remove a particular technology or protocol based routing cfg of a handle from the routing table. */
 typedef UINT8 tNFA_EE_PWR_STATE;
 
