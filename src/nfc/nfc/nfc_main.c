@@ -89,14 +89,10 @@ tNFC_CB nfc_cb;
 UINT8 i2c_fragmentation_enabled = 0xff;
 
 #if (NFC_RW_ONLY == FALSE)
-#if(NXP_EXTNS == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-#define NFC_NUM_INTERFACE_MAP   3
-#else
+#if ((NXP_EXTNS == TRUE) && (NXP_NFCC_P2P_ENABLED == TRUE))
 #define NFC_NUM_INTERFACE_MAP   2
-#endif
 #else
-#define NFC_NUM_INTERFACE_MAP   2
+#define NFC_NUM_INTERFACE_MAP   1
 #endif
 #else
 #define NFC_NUM_INTERFACE_MAP   1
@@ -110,23 +106,15 @@ static const tNCI_DISCOVER_MAPS nfc_interface_mapping[NFC_NUM_INTERFACE_MAP] =
         NCI_INTERFACE_MODE_POLL_N_LISTEN,
         NCI_INTERFACE_ISO_DEP
     }
+
 #if (NFC_RW_ONLY == FALSE)
+#if ((NXP_EXTNS == TRUE) && (NXP_NFCC_P2P_ENABLED == TRUE))
     ,
     /* this can not be set here due to 2079xB0 NFCC issues */
     {
         NCI_PROTOCOL_NFC_DEP,
         NCI_INTERFACE_MODE_POLL_N_LISTEN,
         NCI_INTERFACE_NFC_DEP
-    }
-#endif
-#if(NXP_EXTNS == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    ,
-    /* This mapping is for Felica on DH  */
-    {
-        NCI_PROTOCOL_T3T,
-        NCI_INTERFACE_MODE_LISTEN,
-        NCI_INTERFACE_FRAME
     }
 #endif
 #endif

@@ -1824,6 +1824,9 @@ static void nfa_dm_poll_disc_cback (tNFA_DM_RF_DISC_EVT event, tNFC_DISCOVER *p_
                 else
                 {
 #endif
+#if ((NXP_EXTNS == TRUE) && (NXP_NFCC_P2P_ENABLED == FALSE))
+                    nfa_dm_rf_deactivate (NFA_DEACTIVATE_TYPE_DISCOVERY);
+#else
                     if (!(nfa_dm_cb.flags & NFA_DM_FLAGS_P2P_PAUSED))
                     {
                         /* activate LLCP */
@@ -1839,6 +1842,7 @@ static void nfa_dm_poll_disc_cback (tNFA_DM_RF_DISC_EVT event, tNFC_DISCOVER *p_
                         NFA_TRACE_DEBUG0 ("P2P is paused");
                         nfa_dm_notify_activation_status (NFA_STATUS_OK, NULL);
                     }
+#endif
 #if(NXP_EXTNS == TRUE)
                 }
 #endif

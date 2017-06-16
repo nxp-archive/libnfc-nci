@@ -40,6 +40,7 @@
 #define NXP_NFCC_FORCE_FW_DOWNLOAD              TRUE
 #define NXP_NFCC_POWER_OFF_CE                   FALSE
 #define NXP_UICC_CREATE_CONNECTIVITY_PIPE       FALSE
+#define NXP_NFCC_P2P_ENABLED                    FALSE
 #if(NFC_NXP_ESE == TRUE)
 #define NXP_NFCC_SPI_FW_DOWNLOAD_SYNC           FALSE
 #define NFA_EE_MAX_EE_SUPPORTED                 4

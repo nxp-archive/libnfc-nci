@@ -746,39 +746,6 @@ NFCSTATUS phNxpNciHal_write_ext(uint16_t *cmd_len, uint8_t *p_cmd_data,
         usleep(gSvddSyncOff_Delay*1000);
     }
 #endif
-    if (nxpprofile_ctrl.profile_type == EMV_CO_PROFILE)
-    {
-        if (p_cmd_data[0] == 0x21 &&
-                p_cmd_data[1] == 0x06 &&
-                p_cmd_data[2] == 0x01 &&
-                p_cmd_data[3] == 0x03)
-        {
-#if 0
-            //Needs clarification whether to keep it or not
-            NXPLOG_NCIHAL_D ("EmvCo Poll mode - RF Deactivate discard");
-            phNxpNciHal_print_packet("SEND", p_cmd_data, *cmd_len);
-            *rsp_len = 4;
-            p_rsp_data[0] = 0x41;
-            p_rsp_data[1] = 0x06;
-            p_rsp_data[2] = 0x01;
-            p_rsp_data[3] = 0x00;
-            phNxpNciHal_print_packet("RECV", p_rsp_data, 4);
-            status = NFCSTATUS_FAILED;
-#endif
-        }
-        else if(p_cmd_data[0] == 0x21 &&
-                p_cmd_data[1] == 0x03 )
-        {
-            NXPLOG_NCIHAL_D ("EmvCo Poll mode - Discover map only for A and B");
-            p_cmd_data[2] = 0x05;
-            p_cmd_data[3] = 0x02;
-            p_cmd_data[4] = 0x00;
-            p_cmd_data[5] = 0x01;
-            p_cmd_data[6] = 0x01;
-            p_cmd_data[7] = 0x01;
-            *cmd_len = 8;
-        }
-    }
 #if(NFC_NXP_CHIP_TYPE == PN547C2)
 
     if (retval == 0x01 &&
