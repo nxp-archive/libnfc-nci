@@ -82,7 +82,7 @@
     #define NXP_ESE_SVDD_SYNC                     FALSE
     #define NXP_LEGACY_APDU_GATE                  FALSE
     #define NXP_NFCC_ESE_UICC_CONCURRENT_ACCESS_PROTECTION   FALSE
-    #define NXP_ESE_JCOP_DWNLD_PROTECTION         FALSE
+    #define NXP_ESE_JCOP_DWNLD_PROTECTION         TRUE
     #define NXP_UICC_HANDLE_CLEAR_ALL_PIPES       FALSE
     #define NFC_NXP_GP_CONTINOUS_PROCESSING       FALSE
     #define NXP_ESE_DWP_SPI_SYNC_ENABLE           FALSE

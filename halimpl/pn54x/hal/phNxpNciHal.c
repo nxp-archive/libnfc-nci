@@ -59,7 +59,7 @@ static uint8_t read_failed_disable_nfc = FALSE;
 #endif
 static uint8_t pwr_link_required = FALSE;
 static uint8_t config_access = FALSE;
-static NFCSTATUS phNxpNciHal_FwDwnld(void);
+static NFCSTATUS phNxpNciHal_FwDwnld(uint16_t aType);
 static NFCSTATUS phNxpNciHal_SendCmd(uint8_t cmd_len, uint8_t* pcmd_buff);
 static void phNxpNciHal_check_delete_nfaStorage_DHArea();
 /* NCI HAL Control structure */
@@ -483,14 +483,19 @@ static void phNxpNciHal_get_clk_freq(void)
  *                  In case of failure returns other failure value.
  *
  ******************************************************************************/
-static NFCSTATUS phNxpNciHal_FwDwnld(void)
+static NFCSTATUS phNxpNciHal_FwDwnld(uint16_t aType)
 {
-    NFCSTATUS status = NFCSTATUS_SUCCESS, wConfigStatus = NFCSTATUS_SUCCESS;
-    if (wFwVerRsp == 0)
+    NFCSTATUS status = NFCSTATUS_SUCCESS;
+
+    if(aType != NFC_STATUS_NOT_INITIALIZED)
     {
-        phDnldNfc_InitImgInfo();
+        if (wFwVerRsp == 0)
+        {
+            phDnldNfc_InitImgInfo();
+        }
+        status= phNxpNciHal_CheckValidFwVersion();
     }
-    status= phNxpNciHal_CheckValidFwVersion();
+
     if (NFCSTATUS_SUCCESS == status)
     {
         NXPLOG_NCIHAL_D ("Found Valid Firmware Type");
@@ -509,7 +514,6 @@ static NFCSTATUS phNxpNciHal_FwDwnld(void)
     {
         if (wFwVerRsp == 0)
             phDnldNfc_ReSetHwDevHandle();
-
     }
     clean_and_return:
     return status;
@@ -1240,6 +1244,32 @@ void read_retry()
         /* TODO: Not sure how to handle this ? */
     }
 }
+/*******************************************************************************
+**
+** Function         phNxpNciHal_check_delete_nfaStorage_DHArea
+**
+** Description      check the file and delete if present.
+**
+**
+** Returns          void
+**
+*******************************************************************************/
+void phNxpNciHal_check_delete_nfaStorage_DHArea()
+{
+    struct stat st;
+    const char config_eseinfo_path[] = "/data/nfc/nfaStorage.bin1";
+    if (stat(config_eseinfo_path, &st) == -1)
+    {
+        ALOGD("%s file not present = %s", __FUNCTION__, config_eseinfo_path);
+    }
+    else
+    {
+        ALOGD("%s file present = %s", __FUNCTION__, config_eseinfo_path);
+        remove(config_eseinfo_path);
+        ALOGD("%s Deleting the file present = %s", __FUNCTION__, config_eseinfo_path);
+    }
+}
+
 /******************************************************************************
  * Function         phNxpNciHal_core_initialized
  *
@@ -2313,7 +2343,6 @@ invoke_callback:
 #endif*/
     return NFCSTATUS_SUCCESS;
 }
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 /******************************************************************************
  * Function         phNxpNciHal_check_eSE_Session_Identity
  *
@@ -2393,7 +2422,7 @@ static NFCSTATUS phNxpNciHal_check_eSE_Session_Identity(void)
     }
     return status;
 }
-
+#if(NFC_NXP_CHIP_TYPE != PN547C2)
 /******************************************************************************
  * Function         phNxpNciHal_CheckRFCmdRespStatus
  *
@@ -2421,31 +2450,6 @@ NFCSTATUS phNxpNciHal_CheckRFCmdRespStatus()
         }
     }
     return status;
-}
-/*******************************************************************************
-**
-** Function         phNxpNciHal_check_delete_nfaStorage_DHArea
-**
-** Description      check the file and delete if present.
-**
-**
-** Returns          void
-**
-*******************************************************************************/
-void phNxpNciHal_check_delete_nfaStorage_DHArea()
-{
-    struct stat st;
-    const char config_eseinfo_path[] = "/data/nfc/nfaStorage.bin1";
-    if (stat(config_eseinfo_path, &st) == -1)
-    {
-        ALOGD("%s file not present = %s", __FUNCTION__, config_eseinfo_path);
-    }
-    else
-    {
-        ALOGD("%s file present = %s", __FUNCTION__, config_eseinfo_path);
-        remove(config_eseinfo_path);
-        ALOGD("%s Deleting the file present = %s", __FUNCTION__, config_eseinfo_path);
-    }
 }
 /******************************************************************************
  * Function         phNxpNciHalRFConfigCmdRecSequence
@@ -2848,9 +2852,7 @@ int phNxpNciHal_close(void)
     {
         NXPLOG_NCIHAL_E ("NCI_CORE_RESET: Failed");
     }
-#if (NXP_NFCC_I2C_READ_WRITE_IMPROVEMENT == TRUE)
     close_and_return:
-#endif
     if (NULL != gpphTmlNfc_Context->pDevHandle)
     {
         phNxpNciHal_close_complete(NFCSTATUS_SUCCESS);
@@ -3260,7 +3262,7 @@ int phNxpNciHal_ioctl(long arg, void *p_data)
         }
         break;
     case HAL_NFC_IOCTL_FW_DWNLD:
-        status = phNxpNciHal_FwDwnld();
+        status = phNxpNciHal_FwDwnld(*(uint16_t*)p_data);
         *(uint16_t*)p_data = (uint16_t)status;
         if(NFCSTATUS_SUCCESS == status)
         {

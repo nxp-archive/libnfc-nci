@@ -87,6 +87,11 @@
 #define NFCSTATUS_BUFFER_TOO_SMALL                            (0x0003)
 
 /*
+ * The function indicates given module not initialized
+ */
+#define NFC_STATUS_NOT_INITIALIZED                            (0x0004)
+
+/*
  * Device specifier/handle value is invalid for the operation
  */
 #define NFCSTATUS_INVALID_DEVICE                              (0x0006)

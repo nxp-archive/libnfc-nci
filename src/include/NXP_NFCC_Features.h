@@ -43,9 +43,9 @@
 #define NXP_NFCC_P2P_ENABLED                    FALSE
 #if(NFC_NXP_ESE == TRUE)
 #define NXP_NFCC_SPI_FW_DOWNLOAD_SYNC           FALSE
-#define NFA_EE_MAX_EE_SUPPORTED                 4
+#define NFA_EE_MAX_EE_SUPPORTED                 2
 #else
-#define NFA_EE_MAX_EE_SUPPORTED                 3
+#define NFA_EE_MAX_EE_SUPPORTED                 1
 #endif
 #elif(NFC_NXP_CHIP_TYPE == PN551)
 #define NXP_NFCC_I2C_READ_WRITE_IMPROVEMENT     TRUE

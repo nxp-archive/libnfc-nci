@@ -681,7 +681,11 @@ void nfa_hci_startup_complete (tNFA_STATUS status)
 {
     tNFA_HCI_EVT_DATA   evt_data;
 
+#if(NXP_EXTNS == TRUE)
+    NFA_TRACE_EVENT2 ("nfa_hci_startup_complete (): Status: %u, hci_state=%u", status, nfa_hci_cb.hci_state);
+#else
     NFA_TRACE_EVENT1 ("nfa_hci_startup_complete (): Status: %u", status);
+#endif
 
     nfa_sys_stop_timer (&nfa_hci_cb.timer);
 
@@ -695,9 +699,25 @@ void nfa_hci_startup_complete (tNFA_STATUS status)
     else if(nfa_hci_cb.hci_state == NFA_HCI_STATE_NFCEE_ENABLE)
     {
         nfa_hci_cb.hci_state = NFA_HCI_STATE_IDLE;
-        evt_data.admin_rsp_rcvd.status = status;
-        evt_data.admin_rsp_rcvd.NoHostsPresent = 0;
-        nfa_hciu_send_to_all_apps (NFA_HCI_HOST_TYPE_LIST_READ_EVT, &evt_data);
+        if(nfa_hci_cb.cmd_sent == NFA_HCI_ANY_GET_PARAMETER &&
+            nfa_hci_cb.param_in_use == NFA_HCI_HOST_LIST_INDEX)
+        {
+            evt_data.admin_rsp_rcvd.NoHostsPresent = 0;
+        }
+        else
+        {
+            evt_data.admin_rsp_rcvd.status = status;
+            nfa_hciu_send_to_all_apps (NFA_HCI_CONFIG_DONE_EVT, &evt_data);
+        }
+        return;
+    }
+    else if((status != NFA_STATUS_OK) &&
+        ((nfa_hci_cb.hci_state == NFA_HCI_STATE_STARTUP) ||
+        (nfa_hci_cb.hci_state == NFA_HCI_STATE_WAIT_NETWK_ENABLE)))
+    {
+        nfa_hci_cb.hci_state = NFA_HCI_STATE_IDLE;
+        if(nfa_dm_cb.p_dm_cback)
+          (*nfa_dm_cb.p_dm_cback)(NFA_DM_EE_HCI_ENABLE_FAIL, NULL);
         return;
     }
 #endif
@@ -926,6 +946,13 @@ void nfa_hci_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
 #endif
     if (event == NFC_CONN_CREATE_CEVT)
     {
+#if(NXP_EXTNS == TRUE)
+        tNFA_EE_MSG p_msgdata;
+        p_msgdata.conn.conn_id = conn_id;
+        p_msgdata.conn.event = event;
+        p_msgdata.conn.p_data = p_data;
+        nfa_ee_nci_conn(&p_msgdata);
+#endif
         nfa_hci_cb.conn_id   = conn_id;
         nfa_hci_cb.buff_size = p_data->conn_create.buff_size;
 
@@ -934,6 +961,13 @@ void nfa_hci_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
             nfa_hci_cb.w4_hci_netwk_init = TRUE;
             nfa_hciu_alloc_gate (NFA_HCI_CONNECTIVITY_GATE,0);
         }
+#if(NXP_EXTNS == TRUE)
+        if (nfa_hci_cb.hci_state == NFA_HCI_STATE_DISABLED)
+        {
+            nfa_hci_cb.hci_state = NFA_HCI_STATE_IDLE;
+            return;
+        }
+#endif
 
         if (nfa_hci_cb.cfg.admin_gate.pipe01_state == NFA_HCI_PIPE_CLOSED)
         {
@@ -954,11 +988,19 @@ void nfa_hci_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
     {
         nfa_hci_cb.conn_id   = 0;
         nfa_hci_cb.hci_state = NFA_HCI_STATE_DISABLED;
-        /* deregister message handler on NFA SYS */
-        nfa_sys_deregister (NFA_ID_HCI);
-#if((NXP_EXTNS == TRUE) && (NFC_NXP_STAT_DUAL_UICC_EXT_SWITCH == TRUE))
-        if(nfa_dm_cb.p_dm_cback)
-        (*nfa_dm_cb.p_dm_cback)(NFA_DM_EE_HCI_DISABLE, NULL);
+#if(NXP_EXTNS == TRUE)
+        if(nfa_ee_connectionClosed())
+#endif
+            /* deregister message handler on NFA SYS */
+            nfa_sys_deregister (NFA_ID_HCI);
+        NFA_TRACE_DEBUG0("NFC_CONN_CLOSE_CEVT handled");
+
+#if(NXP_EXTNS == TRUE)
+        tNFA_EE_MSG p_msgdata;
+        p_msgdata.conn.conn_id = conn_id;
+        p_msgdata.conn.event = event;
+        p_msgdata.conn.p_data = p_data;
+        nfa_ee_nci_conn(&p_msgdata);
 #endif
     }
 
