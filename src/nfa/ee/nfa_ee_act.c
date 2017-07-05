@@ -635,7 +635,11 @@ void nfa_ee_api_mode_set(tNFA_EE_MSG *p_data)
             && (p_cb->ee_status != NFA_EE_STATUS_REMOVED)
 #endif
         )
+#if(NXP_EXTNS == TRUE)
+        p_cb->ee_status = NFA_EE_STATUS_ACTIVE;
+#else
         p_cb->ee_status = NFA_EE_STATUS_PENDING | NFA_EE_STATUS_ACTIVE;
+#endif
     else
     {
 #if(NXP_EXTNS == TRUE)
@@ -1206,6 +1210,10 @@ void nfa_ee_api_disconnect(tNFA_EE_MSG *p_data)
 {
     tNFA_EE_ECB  *p_cb = p_data->disconnect.p_cb;
     tNFA_EE_CBACK_DATA  evt_data = {0};
+
+#if(NXP_EXTNS == TRUE)
+    nfa_ee_cb.ee_flags |= NFA_EE_HCI_CONN_CLOSE;
+#endif
 
     if (p_cb->conn_st == NFA_EE_CONN_ST_CONN)
     {
@@ -1998,6 +2006,9 @@ void nfa_ee_nci_conn(tNFA_EE_MSG *p_data)
             p_cb->conn_st    = NFA_EE_CONN_ST_NONE;
             p_cb->p_ee_cback = NULL;
             p_cb->conn_id    = 0;
+#if(NXP_EXTNS == TRUE)
+            nfa_ee_cb.ee_flags &= ~NFA_EE_HCI_CONN_CLOSE;
+#endif
             if (nfa_ee_cb.em_state == NFA_EE_EM_STATE_DISABLING)
             {
                 if (nfa_ee_cb.ee_flags & NFA_EE_FLAG_WAIT_DISCONN)

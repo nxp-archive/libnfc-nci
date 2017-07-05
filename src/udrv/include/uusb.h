@@ -110,16 +110,6 @@ typedef enum
 
 typedef UINT8 tEndPoint;
 
-#if 0
-#define  UUSB_ATTACHED      0
-#define  UUSB_POWERED       1
-#define  UUSB_DEFAULT       2
-#define  UUSB_ADDRESS       3
-#define  UUSB_CONFIGURED    4
-#define  UUSB_SUSPENDED     5
-
-typedef UINT8 tUUSB_BUS_STATE;
-#else
 typedef enum
 {
   UUSB_ATTACHED,
@@ -129,7 +119,6 @@ typedef enum
   UUSB_CONFIGURED,
   UUSB_SUSPENDED
 } tUUSB_BUS_STATE;
-#endif
 
 typedef enum _tUUSB_STANDART_REQ
 {

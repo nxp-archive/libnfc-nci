@@ -740,7 +740,9 @@ static void nfc_main_hal_cback(UINT8 event, tHAL_NFC_STATUS status)
 static void nfc_main_hal_data_cback(UINT16 data_len, UINT8   *p_data)
 {
     BT_HDR *p_msg;
-
+#if(NXP_EXTNS == TRUE)
+    UINT16 status = NCI_STATUS_NOT_INITIALIZED;
+#endif
     /* ignore all data while shutting down NFCC */
     if (nfc_cb.nfc_state == NFC_STATE_W4_HAL_CLOSE)
     {
@@ -766,6 +768,22 @@ static void nfc_main_hal_data_cback(UINT16 data_len, UINT8   *p_data)
             NFC_TRACE_ERROR0 ("nfc_main_hal_data_cback (): No buffer");
         }
     }
+#if(NXP_EXTNS == TRUE)
+    else if (nfc_cb.nfc_state == NFC_STATE_CORE_INIT)
+    {
+        NFC_TRACE_DEBUG0("nfc_main_hal_data_cback (): retry FW download");
+        nfc_main_flush_cmd_queue();
+        nfc_cb.p_hal->ioctl(HAL_NFC_IOCTL_FW_DWNLD, &status);
+        if (status == NFC_STATUS_OK) {
+            NFC_TRACE_DEBUG0("nfc_main_hal_data_cback (): start NFC init");
+            GKI_send_event(NFC_TASK, NFC_TASK_EVT_TRANSPORT_READY);
+        }
+        else
+        {
+            nfc_enabled(NFC_STATUS_FAILED, NULL);
+        }
+    }
+#endif
 }
 
 /*******************************************************************************

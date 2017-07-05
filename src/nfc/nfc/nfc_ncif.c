@@ -1806,6 +1806,9 @@ void nfc_ncif_proc_deactivate (UINT8 status, UINT8 deact_type, BOOLEAN is_ntf)
     tNFC_DISCOVER   evt_data;
     tNFC_DEACTIVATE_DEVT    *p_deact;
     tNFC_CONN_CB * p_cb = &nfc_cb.conn_cb[NFC_RF_CONN_ID];
+#if (NXP_EXTNS == TRUE)
+    tRW_T3T_CB *p_t3tcb = &rw_cb.tcb.t3t;
+#endif
     void    *p_data;
 
     nfc_set_state (NFC_STATE_IDLE);
@@ -1828,6 +1831,12 @@ void nfc_ncif_proc_deactivate (UINT8 status, UINT8 deact_type, BOOLEAN is_ntf)
         (*p_cb->p_cback) (NFC_RF_CONN_ID, NFC_DEACTIVATE_CEVT, (tNFC_CONN *) p_deact);
 
 #if (NXP_EXTNS == TRUE)
+    if (p_t3tcb->poll_timer.in_use)
+    {
+        NFC_TRACE_DEBUG1 ("%s: stopping t3t polling timer", __func__);
+        nfc_stop_quick_timer (&p_t3tcb->poll_timer);
+    }
+
     if((nfc_cb.flags & (NFC_FL_DISCOVER_PENDING | NFC_FL_CONTROL_REQUESTED))
        && (deact_type == NFC_DEACTIVATE_TYPE_DISCOVERY) && (is_ntf == TRUE))
     {
@@ -1950,15 +1959,6 @@ void nfc_ncif_proc_ee_action (UINT8 *p, UINT16 plen)
         {
             nfc_cb.bBlockWiredMode = TRUE;
             nfc_cb.bBlkPwrlinkAndModeSetCmd  = TRUE;
-            if(!nfc_cb.bIsDwpResPending && nfa_hci_cb.assembling)
-            {
-                /*To faster xceive timeout when UICC-CE is activated during chained rsp rx*/
-                NFC_TRACE_DEBUG0("restarted hci timer during chained response");
-                nfa_hci_cb.IsWiredSessionAborted = TRUE;
-                nfa_sys_stop_timer(&nfa_hci_cb.timer);
-                if(p_cb && p_cb->p_cback)
-                    (*p_cb->p_cback)(nfa_hci_cb.conn_id, NFC_HCI_RESTART_TIMER, (tNFC_CONN*)&evt_data);
-            }
         }
         else
         {
@@ -2416,7 +2416,7 @@ void nfc_ncif_proc_init_rsp (BT_HDR *p_msg)
                         /* copying init rsp to p_msg  */
                         memcpy ((UINT8 *)(p_msg + 1) + p_msg->offset, init_rsp, p_msg->len);
                     }
-                    if(!init_rsp)
+                    if(init_rsp)
                         GKI_freebuf(init_rsp);
                 }
             }
@@ -2972,6 +2972,9 @@ BOOLEAN nfc_ncif_proc_proprietary_rsp (UINT8 mt, UINT8 gid, UINT8 oid)
             case 0x09:
                 stat = FALSE;/*NFA_EE_ACTION_NTF*/
                 break;
+            case 0x0A:      /*NFA_EE_DISCOVERY_REQ_NTF*/
+                stat = FALSE;
+                break;
             default:
                 stat = TRUE;
                 break;
@@ -2981,6 +2984,8 @@ BOOLEAN nfc_ncif_proc_proprietary_rsp (UINT8 mt, UINT8 gid, UINT8 oid)
              switch (oid)
              {
              case 0x00:
+             /*FALL_THRU; NFCEE_MODE_SET_NTF*/
+             case 0x01:
                   stat = FALSE;
                   break;
              default :

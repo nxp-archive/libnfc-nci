@@ -187,6 +187,7 @@ typedef UINT8 tNFA_PROTOCOL_MASK;
 #define NFA_DM_EE_HCI_DISABLE           11  /*Status when EE HCI subsystems disabled*/
 #define NFA_DM_EE_HCI_ENABLE            12  /*Status when EE HCI susbsystems enabled*/
 #endif
+#define NFA_DM_EE_HCI_ENABLE_FAIL       13  /*Status when HCI network enable fail*/
 /* Reader over SWP Events*/
 #define NFA_RD_SWP_READER_REQUESTED     0
 #define NFA_RD_SWP_READER_START         1
@@ -286,7 +287,10 @@ typedef enum
     NFA_DTA_SNEP_MODE   = 0x00000003,
     NFA_DTA_HCEF_MODE   = 0x00000004,
     NFA_DTA_CR8 = 0x00000080,
-    NFA_DTA_CR9 = 0x00000090
+    NFA_DTA_CR9 = 0x00000090,
+    NFA_DTA_CR10 = 0x000000A0,
+    NFA_DTA_CR11 = 0x000000B0,
+    NFA_DTA_CR12 = 0x000000C0,
 }tNFA_eDtaModes;
 typedef struct
 {

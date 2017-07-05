@@ -885,47 +885,6 @@ NFCSTATUS phNxpNciHal_write_ext(uint16_t *cmd_len, uint8_t *p_cmd_data,
         phNxpNciHal_print_packet("RECV", p_rsp_data, 5);
 //        status = NFCSTATUS_FAILED;
     }
-
-#if 0
-    else if ( (p_cmd_data[0] == 0x20 && p_cmd_data[1] == 0x02 ) &&
-                 ((p_cmd_data[2] == 0x09 && p_cmd_data[3] == 0x04) ||
-                     (p_cmd_data[2] == 0x0B && p_cmd_data[3] == 0x05) ||
-                     (p_cmd_data[2] == 0x07 && p_cmd_data[3] == 0x02) ||
-                     (p_cmd_data[2] == 0x0A && p_cmd_data[3] == 0x03) ||
-                     (p_cmd_data[2] == 0x0A && p_cmd_data[3] == 0x04) ||
-                     (p_cmd_data[2] == 0x05 && p_cmd_data[3] == 0x02))
-             )
-    {
-        NXPLOG_NCIHAL_D ("> Dirty Set Config ");
-        phNxpNciHal_print_packet("SEND", p_cmd_data, *cmd_len);
-        *rsp_len = 5;
-        p_rsp_data[0] = 0x40;
-        p_rsp_data[1] = 0x02;
-        p_rsp_data[2] = 0x02;
-        p_rsp_data[3] = 0x00;
-        p_rsp_data[4] = 0x00;
-
-        phNxpNciHal_print_packet("RECV", p_rsp_data, 5);
-        status = NFCSTATUS_FAILED;
-    }
-
-    else if((p_cmd_data[0] == 0x20 && p_cmd_data[1] == 0x02) &&
-           ((p_cmd_data[3] == 0x00) ||
-           ((*cmd_len >= 0x06) && (p_cmd_data[5] == 0x00)))) /*If the length of the first param id is zero don't allow*/
-    {
-        NXPLOG_NCIHAL_D ("> Dirty Set Config ");
-        phNxpNciHal_print_packet("SEND", p_cmd_data, *cmd_len);
-        *rsp_len = 5;
-        p_rsp_data[0] = 0x40;
-        p_rsp_data[1] = 0x02;
-        p_rsp_data[2] = 0x02;
-        p_rsp_data[3] = 0x00;
-        p_rsp_data[4] = 0x00;
-
-        phNxpNciHal_print_packet("RECV", p_rsp_data, 5);
-        status = NFCSTATUS_FAILED;
-    }
-#endif
     else if ((wFwVerRsp & 0x0000FFFF) == wFwVer)
     {
         /* skip CORE_RESET and CORE_INIT from Brcm */

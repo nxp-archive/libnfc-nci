@@ -529,8 +529,22 @@ void nfa_ee_sys_disable (void)
             {
                 /* Disconnect NCI connection on graceful shutdown */
                 msg.disconnect.p_cb = p_cb;
+#if(NXP_EXTNS == TRUE)
+                if(p_cb->conn_id == 0x03)
+                {
+                    msg.conn.conn_id = p_cb->conn_id;
+                    msg.conn.event = NFC_CONN_CLOSE_CEVT;
+                    nfa_ee_nci_conn(&msg);
+                }
+                else
+                {
+                    nfa_ee_api_disconnect (&msg);
+                    nfa_ee_cb.num_ee_expecting++;
+                }
+#else
                 nfa_ee_api_disconnect (&msg);
                 nfa_ee_cb.num_ee_expecting++;
+#endif
             }
             else
             {
@@ -560,6 +574,21 @@ void nfa_ee_sys_disable (void)
         nfa_sys_deregister (NFA_ID_EE);
 
 }
+#if(NXP_EXTNS == TRUE)
+/*******************************************************************************
+**
+** Function         nfa_ee_connectionClosed
+**
+** Description      Check if EE's HCI connection is closed or not
+**
+** Returns          EE connection closed status
+**
+*******************************************************************************/
+UINT8 nfa_ee_connectionClosed(void)
+{
+    return (!(nfa_ee_cb.ee_flags & NFA_EE_HCI_CONN_CLOSE));
+}
+#endif
 
 /*******************************************************************************
 **
@@ -720,15 +749,6 @@ BOOLEAN nfa_ee_evt_hdlr (BT_HDR *p_msg)
         nfa_ee_sm_st_2_str (nfa_ee_cb.em_state), nfa_ee_cb.em_state);
 #else
     NFA_TRACE_DEBUG2 ("nfa_ee_evt_hdlr (): Event 0x%02x, State: %d", p_evt_data->hdr.event, nfa_ee_cb.em_state);
-#endif
-
-#if 0
-    /*This is required to receive Reader Over SWP event*/
-    if(p_evt_data->hdr.event == NFA_EE_NCI_DISC_NTF_EVT)
-    {
-        NFA_TRACE_DEBUG0("recived dis_ntf; stopping timer");
-        nfa_sys_stop_timer(&nfa_ee_cb.discv_timer);
-    }
 #endif
 
     switch (nfa_ee_cb.em_state)
