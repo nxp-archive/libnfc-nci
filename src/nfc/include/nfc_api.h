@@ -93,7 +93,7 @@
 #define NXP_EN_PN553                    1
 #define NXP_EN_PN80T                    1
 #define NXP_KOS_VER                     (2U) /* NXP android version */
-#define NFC_NXP_MW_VERSION_MAJ          (3U) /* MW Major Version */
+#define NFC_NXP_MW_VERSION_MAJ          (4U) /* MW Major Version */
 #define NFC_NXP_MW_VERSION_MIN          (0U) /* MW Minor Version */
 #endif
 /* 0xE0 ~0xFF are proprietary status codes */
@@ -271,6 +271,7 @@ enum
     NFC_NFCEE_PWR_LNK_CTRL_REVT              /* PWR LINK CTRL Event for Wired Mode standby */
 #if (NXP_EXTNS == TRUE)
     ,NFC_NFCEE_MODE_SET_INFO                 /*  NFCEE Mode Set Notification*/
+    ,NFC_API_WAIT_CLEANUP                    /* application api cleanup after mw recovery */
 #endif
 };
 typedef UINT16 tNFC_RESPONSE_EVT;
