@@ -491,7 +491,13 @@ static void nfa_dm_nfc_response_cback (tNFC_RESPONSE_EVT event, tNFC_RESPONSE *p
 #endif
         (*nfa_dm_cb.p_dm_cback) (dm_cback_evt, NULL);
         break;
-
+#if(NXP_EXTNS == TRUE)
+    case NFC_API_WAIT_CLEANUP:
+        NFA_TRACE_DEBUG0("NFC_API_WAIT_CLEANUP");
+        dm_cback_evt = NFA_DM_API_WAIT_CLEANUP;
+        (*nfa_dm_cb.p_dm_cback) (dm_cback_evt, NULL);
+        break;
+#endif
     case NFC_NFCC_POWER_OFF_REVT:
         nfa_dm_cb.nfcc_pwr_mode = NFA_DM_PWR_MODE_OFF_SLEEP;
 

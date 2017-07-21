@@ -227,7 +227,9 @@ void nfc_ncif_cmd_timeout (void)
 #endif
         }
         /*Prepare the DISCOVERY command*/
-        if(!(nfa_dm_cb.disc_cb.disc_state > NFA_DM_RFST_IDLE))
+
+        if(!(nfa_dm_cb.disc_cb.disc_state > NFA_DM_RFST_IDLE) &&
+                (!(nfa_dm_cb.disc_cb.disc_flags & (NFA_DM_DISC_FLAGS_W4_RSP | NFA_DM_DISC_FLAGS_W4_NTF))))
         {
             NFC_TRACE_DEBUG0 ("NFCC last NCI RF state is IDLE");
             /*NCI stack RF state set to IDLE*/
@@ -241,6 +243,11 @@ void nfc_ncif_cmd_timeout (void)
             buffer[1] = 0x01;
             /*NCI stack RF state set to DISCOVERY*/
             nfa_dm_cb.disc_cb.disc_state = 0x01;
+            if((nfa_dm_cb.disc_cb.disc_flags & (NFA_DM_DISC_FLAGS_W4_RSP | NFA_DM_DISC_FLAGS_W4_NTF)))
+            {
+              nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_W4_RSP;
+              nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_W4_NTF;
+            }
             /*Listen Mode flags initialized to 0x00*/
             nfa_ce_cb.flags = 0x00;
 
@@ -257,9 +264,8 @@ void nfc_ncif_cmd_timeout (void)
             }
             else
             {
-                buffer[2] = 0x1A; /*Length of hard coded recovery discovery command*/
-                memcpy((UINT8 *)&buffer[3],
-                    "\x21\x03\x17\x0B\x00\x01\x01\x01\x02\x01\x03\x01\x80\x01\x81\x01\x82\x01\x83\x01\x85\x01\x06\x01\x77\x01", 24);
+                buffer[2] = 0x8; /*Length of hard coded recovery discovery command*/
+	        memcpy((UINT8 *)&buffer[3],"\x21\x03\x05\x02\x00\x01\x80\x01", 8);
             }
         }
         /*Prepare the last command sent just before CORE_RESET_NTF*/
@@ -337,6 +343,7 @@ void nfc_ncif_cmd_timeout (void)
         nfc_cb.p_hal->core_initialized (buffer);
         if(buffer != NULL) free(buffer);
         NFC_TRACE_DEBUG0 ("nfc_ncif_cmd_timeout(): exit");
+        nfc_ncif_event_status(NFC_API_WAIT_CLEANUP, NFA_DM_API_WAIT_CLEANUP);
     }
 #else
     /* report an error */

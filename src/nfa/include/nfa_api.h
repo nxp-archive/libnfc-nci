@@ -188,6 +188,7 @@ typedef UINT8 tNFA_PROTOCOL_MASK;
 #define NFA_DM_EE_HCI_ENABLE            12  /*Status when EE HCI susbsystems enabled*/
 #endif
 #define NFA_DM_EE_HCI_ENABLE_FAIL       13  /*Status when HCI network enable fail*/
+#define NFA_DM_API_WAIT_CLEANUP         14  /* Status when Revovery is don and unblcok  the jni api*/
 /* Reader over SWP Events*/
 #define NFA_RD_SWP_READER_REQUESTED     0
 #define NFA_RD_SWP_READER_START         1
