@@ -375,7 +375,9 @@ void nfc_process_quick_timer_evt (void)
 void nfc_task_shutdown_nfcc (void)
 {
     BT_HDR        *p_msg;
-
+#if((NXP_EXTNS == TRUE) && (NXP_ESE_DUAL_MODE_PRIO_SCHEME == NXP_ESE_WIRED_MODE_RESUME))
+    nfc_stop_timer(&nfc_cb.rf_filed_event_timeout_timer);
+#endif
     /* Free any messages still in the mbox */
     while ((p_msg = (BT_HDR *) GKI_read_mbox (NFC_MBOX_ID)) != NULL)
     {

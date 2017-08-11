@@ -50,6 +50,13 @@
 #define FW_MOBILE_MAJOR_NUMBER FW_MOBILE_MAJOR_NUMBER_PN48AD
 #endif
 
+#define NXP_NCI_HAL_CORE_INIT_RECOVER(recoveryCount, recoveryLabel)\
+do\
+{\
+    recoveryCount++;\
+    goto recoveryLabel;\
+}while(0)
+
 /* Processing of ISO 15693 EOF */
 extern uint8_t icode_send_eof;
 extern uint8_t icode_detected;
@@ -99,7 +106,7 @@ static uint8_t Rx_data[NCI_MAX_DATA_LEN];
 uint32_t timeoutTimerId = 0;
 phNxpNciHal_Sem_t config_data;
 
-phNxpNciClock_t phNxpNciClock={0, {0}, FALSE};
+phNxpNciClock_t phNxpNciClock={0, {0}};
 
 phNxpNciRfSetting_t phNxpNciRfSet={FALSE, {0} };
 
@@ -114,8 +121,9 @@ static void phNxpNciHal_pre_discover_complete(NFCSTATUS status);
 static void phNxpNciHal_power_cycle_complete(NFCSTATUS status);
 static void phNxpNciHal_kill_client_thread(phNxpNciHal_Control_t *p_nxpncihal_ctrl);
 static void *phNxpNciHal_client_thread(void *arg);
-static void phNxpNciHal_get_clk_freq(void);
-static void phNxpNciHal_set_clock(void);
+static void phNxpNciHal_nfccClockCfgRead(void);
+static NFCSTATUS phNxpNciHal_nfccClockCfgApply(void);
+static void phNxpNciHal_txNfccClockSetCmd(void);
 static void phNxpNciHal_check_factory_reset(void);
 static NFCSTATUS phNxpNciHal_check_eSE_Session_Identity(void);
 static void phNxpNciHal_print_res_status( uint8_t *p_rx_data, uint16_t *p_len);
@@ -123,7 +131,6 @@ static NFCSTATUS phNxpNciHal_CheckValidFwVersion(void);
 static void phNxpNciHal_enable_i2c_fragmentation();
 static void phNxpNciHal_core_MinInitialized_complete(NFCSTATUS status);
 static NFCSTATUS phNxpNciHal_set_Boot_Mode(uint8_t mode);
-NFCSTATUS phNxpNciHal_check_clock_config(void);
 NFCSTATUS phNxpNciHal_set_china_region_configs(void);
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
 static NFCSTATUS phNxpNciHalRFConfigCmdRecSequence();
@@ -311,7 +318,7 @@ static NFCSTATUS phNxpNciHal_fw_download(void)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
     NFCSTATUS wConfigStatus = NFCSTATUS_FAILED;
-    phNxpNciHal_get_clk_freq();
+    phNxpNciHal_nfccClockCfgRead();
     status = phTmlNfc_IoCtl(phTmlNfc_e_EnableDownloadMode);
     if (NFCSTATUS_SUCCESS == status)
     {
@@ -418,61 +425,6 @@ static NFCSTATUS phNxpNciHal_CheckValidFwVersion(void)
 
     return status;
 }
-
-static void phNxpNciHal_get_clk_freq(void)
-{
-    unsigned long num = 0;
-    int isfound = 0;
-
-    nxpprofile_ctrl.bClkSrcVal = 0;
-    nxpprofile_ctrl.bClkFreqVal = 0;
-    nxpprofile_ctrl.bTimeout = 0;
-
-    isfound = GetNxpNumValue(NAME_NXP_SYS_CLK_SRC_SEL, &num, sizeof(num));
-    if (isfound > 0)
-    {
-        nxpprofile_ctrl.bClkSrcVal = num;
-    }
-
-    num = 0;
-    isfound = 0;
-    isfound = GetNxpNumValue(NAME_NXP_SYS_CLK_FREQ_SEL, &num, sizeof(num));
-    if (isfound > 0)
-    {
-        nxpprofile_ctrl.bClkFreqVal = num;
-    }
-
-    num = 0;
-    isfound = 0;
-    isfound = GetNxpNumValue(NAME_NXP_SYS_CLOCK_TO_CFG, &num, sizeof(num));
-    if (isfound > 0)
-    {
-        nxpprofile_ctrl.bTimeout = num;
-    }
-
-    NXPLOG_FWDNLD_D("gphNxpNciHal_fw_IoctlCtx.bClkSrcVal = 0x%x", nxpprofile_ctrl.bClkSrcVal);
-    NXPLOG_FWDNLD_D("gphNxpNciHal_fw_IoctlCtx.bClkFreqVal = 0x%x", nxpprofile_ctrl.bClkFreqVal);
-    NXPLOG_FWDNLD_D("gphNxpNciHal_fw_IoctlCtx.bClkFreqVal = 0x%x", nxpprofile_ctrl.bTimeout);
-
-    if ((nxpprofile_ctrl.bClkSrcVal < CLK_SRC_XTAL) ||
-            (nxpprofile_ctrl.bClkSrcVal > CLK_SRC_PLL))
-    {
-        NXPLOG_FWDNLD_E("Clock source value is wrong in config file, setting it as default");
-        nxpprofile_ctrl.bClkSrcVal = NXP_SYS_CLK_SRC_SEL;
-    }
-    if ((nxpprofile_ctrl.bClkFreqVal < CLK_FREQ_13MHZ) ||
-            (nxpprofile_ctrl.bClkFreqVal > CLK_FREQ_52MHZ))
-    {
-        NXPLOG_FWDNLD_E("Clock frequency value is wrong in config file, setting it as default");
-        nxpprofile_ctrl.bClkFreqVal = NXP_SYS_CLK_FREQ_SEL;
-    }
-    if ((nxpprofile_ctrl.bTimeout < CLK_TO_CFG_DEF) || (nxpprofile_ctrl.bTimeout > CLK_TO_CFG_MAX))
-    {
-        NXPLOG_FWDNLD_E("Clock timeout value is wrong in config file, setting it as default");
-        nxpprofile_ctrl.bTimeout = CLK_TO_CFG_DEF;
-    }
-
-}
 /******************************************************************************
  * Function         phNxpNciHal_FwDwnld
  *
@@ -514,6 +466,7 @@ static NFCSTATUS phNxpNciHal_FwDwnld(uint16_t aType)
     {
         if (wFwVerRsp == 0)
             phDnldNfc_ReSetHwDevHandle();
+
     }
     clean_and_return:
     return status;
@@ -1288,7 +1241,6 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params)
     uint8_t         isfound                             = FALSE;
     uint8_t         fw_dwnld_flag                       = FALSE;
     uint8_t         setConfigAlways                     = FALSE;
-    uint8_t         temp_fix                            = 1;
     static uint8_t  retry_core_init_cnt                 = 0;
     static uint8_t  p2p_listen_mode_routing_cmd[]       = { 0x21, 0x01, 0x07, 0x00, 0x01,
                                                             0x01, 0x03, 0x00, 0x01, 0x05 };
@@ -1357,14 +1309,12 @@ retry_core_init:
         if((status != NFCSTATUS_SUCCESS) && (nxpncihal_ctrl.retry_cnt >= MAX_RETRY_COUNT))
         {
             NXPLOG_NCIHAL_E("Force FW Download, NFCC not coming out from Standby");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
         else if(status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_E ("NCI_CORE_RESET: Failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 
         if(*p_core_init_rsp_params == 2)
@@ -1377,8 +1327,7 @@ retry_core_init:
         if(status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_E ("NCI_CORE_INIT : Failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 
         if(*p_core_init_rsp_params == 3)
@@ -1404,8 +1353,7 @@ retry_core_init:
         status = phNxpNciHal_send_ext_cmd(retlen, buffer);
         if (status != NFCSTATUS_SUCCESS) {
             NXPLOG_NCIHAL_E("NXP ACT Proprietary Ext failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
     }
 
@@ -1416,8 +1364,7 @@ retry_core_init:
         status = phNxpNciHal_send_ext_cmd(retlen, buffer);
         if (status != NFCSTATUS_SUCCESS) {
             NXPLOG_NCIHAL_E("Stand by mode enable failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
     }
 #if(NXP_ESE_SVDD_SYNC == TRUE)
@@ -1434,7 +1381,9 @@ retry_core_init:
     }
 #endif
     config_access = FALSE;
+#if(NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY == FALSE)
     phNxpNciHal_check_factory_reset();
+#endif
 
     mEEPROM_info.buffer = &fw_dwnld_flag;
     mEEPROM_info.bufflen= sizeof(fw_dwnld_flag);
@@ -1566,52 +1515,36 @@ retry_core_init:
     {
         config_access = TRUE;
         retlen = 0;
-        status = phNxpNciHal_check_clock_config();
-        if (status != NFCSTATUS_SUCCESS) {
-            NXPLOG_NCIHAL_E("phNxpNciHal_check_clock_config failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+        if (phNxpNciHal_nfccClockCfgApply() != NFCSTATUS_SUCCESS) {
+            NXPLOG_NCIHAL_E("phNxpNciHal_nfccClockCfgApply failed");
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 
 #ifdef PN547C2_CLOCK_SETTING
-    if (isNxpConfigModified() || (phNxpNciClock.issetConfig)
 #if(NFC_NXP_HFO_SETTINGS == TRUE)
-        || temp_fix == 1
-#endif
-        )
-    {
-        //phNxpNciHal_get_clk_freq();
-        phNxpNciHal_set_clock();
-        phNxpNciClock.issetConfig = FALSE;
-#if(NFC_NXP_HFO_SETTINGS == TRUE)
-        if (temp_fix == 1 )
-        {
-            NXPLOG_NCIHAL_D("Applying Default Clock setting and DPLL register at power on");
-            /*
-            # A0, 0D, 06, 06, 83, 55, 2A, 04, 00 RF_CLIF_CFG_TARGET CLIF_DPLL_GEAR_REG
-            # A0, 0D, 06, 06, 82, 33, 14, 17, 00 RF_CLIF_CFG_TARGET CLIF_DPLL_INIT_REG
-            # A0, 0D, 06, 06, 84, AA, 85, 00, 80 RF_CLIF_CFG_TARGET CLIF_DPLL_INIT_FREQ_REG
-            # A0, 0D, 06, 06, 81, 63, 00, 00, 00 RF_CLIF_CFG_TARGET CLIF_DPLL_CONTROL_REG
-            */
-            static uint8_t cmd_dpll_set_reg_nci[] = {0x20, 0x02, 0x25, 0x04,
-                                                                            0xA0, 0x0D, 0x06, 0x06, 0x83, 0x55, 0x2A, 0x04, 0x00,
-                                                                            0xA0, 0x0D, 0x06, 0x06, 0x82, 0x33, 0x14, 0x17, 0x00,
-                                                                            0xA0, 0x0D, 0x06, 0x06, 0x84, 0xAA, 0x85, 0x00, 0x80,
-                                                                            0xA0, 0x0D, 0x06, 0x06, 0x81, 0x63, 0x00, 0x00, 0x00};
 
-            status = phNxpNciHal_send_ext_cmd(sizeof(cmd_dpll_set_reg_nci), cmd_dpll_set_reg_nci);
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("NXP DPLL REG ACT Proprietary Ext failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
-            }
-            /* reset the NFCC after applying the clock setting and DPLL setting */
-            //phTmlNfc_IoCtl(phTmlNfc_e_ResetDevice);
-            temp_fix = 0;
-            goto retry_core_init;
+        NXPLOG_NCIHAL_D("Applying Default Clock setting and DPLL register at power on");
+        /*
+        # A0, 0D, 06, 06, 83, 55, 2A, 04, 00 RF_CLIF_CFG_TARGET CLIF_DPLL_GEAR_REG
+        # A0, 0D, 06, 06, 82, 33, 14, 17, 00 RF_CLIF_CFG_TARGET CLIF_DPLL_INIT_REG
+        # A0, 0D, 06, 06, 84, AA, 85, 00, 80 RF_CLIF_CFG_TARGET CLIF_DPLL_INIT_FREQ_REG
+        # A0, 0D, 06, 06, 81, 63, 00, 00, 00 RF_CLIF_CFG_TARGET CLIF_DPLL_CONTROL_REG
+        */
+        static uint8_t cmd_dpll_set_reg_nci[] = {0x20, 0x02, 0x25, 0x04,
+                                                 0xA0, 0x0D, 0x06, 0x06, 0x83, 0x55, 0x2A, 0x04, 0x00,
+                                                 0xA0, 0x0D, 0x06, 0x06, 0x82, 0x33, 0x14, 0x17, 0x00,
+                                                 0xA0, 0x0D, 0x06, 0x06, 0x84, 0xAA, 0x85, 0x00, 0x80,
+                                                 0xA0, 0x0D, 0x06, 0x06, 0x81, 0x63, 0x00, 0x00, 0x00};
+
+        status = phNxpNciHal_send_ext_cmd(sizeof(cmd_dpll_set_reg_nci), cmd_dpll_set_reg_nci);
+        if (status != NFCSTATUS_SUCCESS) {
+            NXPLOG_NCIHAL_E("NXP DPLL REG ACT Proprietary Ext failed");
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
+        /* reset the NFCC after applying the clock setting and DPLL setting */
+        //phTmlNfc_IoCtl(phTmlNfc_e_ResetDevice);
+        goto retry_core_init;
 #endif
-    }
 #endif
 
     retlen = 0;
@@ -1623,8 +1556,7 @@ retry_core_init:
         status = phNxpNciHal_send_ext_cmd(retlen, buffer);
         if (status != NFCSTATUS_SUCCESS) {
             NXPLOG_NCIHAL_E("NXP ACT Proprietary Ext failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
     }
 
@@ -1641,8 +1573,7 @@ retry_core_init:
                     status = phNxpNciHal_send_ext_cmd(retlen, buffer);
                     if (status != NFCSTATUS_SUCCESS) {
                         NXPLOG_NCIHAL_E("EXT TVDD CFG 1 Settings failed");
-                        retry_core_init_cnt++;
-                        goto retry_core_init;
+                        NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                     }
                 }
             }
@@ -1653,8 +1584,7 @@ retry_core_init:
                     status = phNxpNciHal_send_ext_cmd(retlen, buffer);
                     if (status != NFCSTATUS_SUCCESS) {
                         NXPLOG_NCIHAL_E("EXT TVDD CFG 2 Settings failed");
-                        retry_core_init_cnt++;
-                        goto retry_core_init;
+                        NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                     }
                 }
             }
@@ -1665,8 +1595,7 @@ retry_core_init:
                     status = phNxpNciHal_send_ext_cmd(retlen, buffer);
                     if (status != NFCSTATUS_SUCCESS) {
                         NXPLOG_NCIHAL_E("EXT TVDD CFG 3 Settings failed");
-                        retry_core_init_cnt++;
-                        goto retry_core_init;
+                        NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                     }
                 }
             }
@@ -1695,16 +1624,14 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
 #endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 1 failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         retlen = 0;
@@ -1722,16 +1649,15 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+
                 }
             }
             else
 #endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 2 failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         retlen = 0;
@@ -1749,16 +1675,14 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
 #endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 3 failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         retlen = 0;
@@ -1776,16 +1700,14 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
 #endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 4 failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         retlen = 0;
@@ -1803,16 +1725,14 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
 #endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 5 failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         retlen = 0;
@@ -1830,16 +1750,14 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
 #endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 6 failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         retlen = 0;
@@ -1854,8 +1772,7 @@ retry_core_init:
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("NXP Core configuration failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
 
@@ -1879,8 +1796,7 @@ retry_core_init:
         else
         {
             NXPLOG_NCIHAL_E("request_EEPROM error occured %d", status);
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 #if (NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH == TRUE)
         /*Read SWP1A data*/
@@ -1895,8 +1811,7 @@ retry_core_init:
         else
         {
             NXPLOG_NCIHAL_E("request_EEPROM error occured %d", status);
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 #endif
         NXPLOG_NCIHAL_D ("Setting value %d %d",swp_info_buff[1],swp_info_buff[0]);
@@ -1912,8 +1827,7 @@ retry_core_init:
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("Core Set Config failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
 
@@ -1925,8 +1839,7 @@ retry_core_init:
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("Setting mifare keys failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
 
@@ -1947,16 +1860,14 @@ retry_core_init:
                 if(status == 0x09)
                 {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
 #endif
                 if (status != NFCSTATUS_SUCCESS) {
                     NXPLOG_NCIHAL_E("Setting NXP_CORE_RF_FIELD status failed");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
         }
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
@@ -1988,8 +1899,7 @@ retry_core_init:
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("SWP switch timeout Setting Failed");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
@@ -2004,16 +1914,14 @@ retry_core_init:
         if (status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_E("phNxpNciHal_set_china_region_configs failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 #endif
 #if(NFC_NXP_CHIP_TYPE == PN547C2)
         status = phNxpNciHal_uicc_baud_rate();
         if (status != NFCSTATUS_SUCCESS) {
             NXPLOG_NCIHAL_E("Setting NXP_CORE_RF_FIELD status failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 #endif
 
@@ -2027,8 +1935,7 @@ retry_core_init:
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("P2P listen mode routing failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
 
@@ -2044,8 +1951,7 @@ retry_core_init:
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("SWP FULL PWR MODE SETTING ON CMD FAILED");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else
@@ -2056,8 +1962,7 @@ retry_core_init:
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("SWP FULL PWR MODE SETTING OFF CMD FAILED");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
         }
@@ -2073,8 +1978,7 @@ retry_core_init:
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("Android L AID Matching Platform Setting Failed");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
             else if (2 == num)
@@ -2085,8 +1989,7 @@ retry_core_init:
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("Android L AID Matching Platform Setting Failed");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
         }
@@ -2116,8 +2019,7 @@ retry_core_init:
         if(status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_E("Session id/ SWP intf reset Failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 #endif
         status = phNxpNciHal_send_ext_cmd(sizeof(cmd_reset_nci),cmd_reset_nci);
@@ -2176,8 +2078,7 @@ retry_core_init:
         if (status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_E("Sending DH and NFCC core connection command as raw packet!! Failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 
         NXPLOG_NCIHAL_E("Sending DH and NFCC mode set as raw packet!!");
@@ -2186,8 +2087,7 @@ retry_core_init:
         if (status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_E("Sending DH and NFCC mode set as raw packet!! Failed");
-            retry_core_init_cnt++;
-            goto retry_core_init;
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
         }
 
         // Set the proper screen state
@@ -2220,8 +2120,7 @@ retry_core_init:
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("Sending Set Screen ON State Command as raw packet!! Failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
 
             NXPLOG_NCIHAL_E("Sending discovery as raw packet!!");
@@ -2230,8 +2129,7 @@ retry_core_init:
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("Sending discovery as raw packet Failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
         }
         else
@@ -2242,8 +2140,7 @@ retry_core_init:
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("Sending Set Screen OFF State Command as raw packet!! Failed");
-                retry_core_init_cnt++;
-                goto retry_core_init;
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
 
         }
@@ -2300,8 +2197,7 @@ retry_core_init:
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("Sending last command for Recovery Failed");
-                    retry_core_init_cnt++;
-                    goto retry_core_init;
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                 }
             }
         }
@@ -3304,101 +3200,265 @@ int phNxpNciHal_ioctl(long arg, void *p_data)
     NXPLOG_NCIHAL_D("%s : exit - ret = %d", __FUNCTION__, ret);
     return ret;
 }
-
 /******************************************************************************
- * Function         phNxpNciHal_set_clock
+ * Function         phNxpNciHal_nfccClockCfgRead
  *
- * Description      This function is called after successfull download
- *                  to apply the clock setting provided in config file
+ * Description      This function is called for loading a data strcuture from
+ *                  the config file with clock source and clock frequency values
  *
  * Returns          void.
  *
  ******************************************************************************/
-static void phNxpNciHal_set_clock(void)
+static void phNxpNciHal_nfccClockCfgRead(void)
+{
+    unsigned long num = 0;
+    int isfound = 0;
+
+    nxpprofile_ctrl.bClkSrcVal = 0;
+    nxpprofile_ctrl.bClkFreqVal = 0;
+    nxpprofile_ctrl.bTimeout = 0;
+
+    isfound = GetNxpNumValue(NAME_NXP_SYS_CLK_SRC_SEL, &num, sizeof(num));
+    if (isfound > 0)
+    {
+        nxpprofile_ctrl.bClkSrcVal = num;
+    }
+
+    num = 0;
+    isfound = 0;
+    isfound = GetNxpNumValue(NAME_NXP_SYS_CLK_FREQ_SEL, &num, sizeof(num));
+    if (isfound > 0)
+    {
+        nxpprofile_ctrl.bClkFreqVal = num;
+    }
+
+    num = 0;
+    isfound = 0;
+    isfound = GetNxpNumValue(NAME_NXP_SYS_CLOCK_TO_CFG, &num, sizeof(num));
+    if (isfound > 0)
+    {
+        nxpprofile_ctrl.bTimeout = num;
+    }
+
+    NXPLOG_FWDNLD_D("gphNxpNciHal_fw_IoctlCtx.bClkSrcVal = 0x%x", nxpprofile_ctrl.bClkSrcVal);
+    NXPLOG_FWDNLD_D("gphNxpNciHal_fw_IoctlCtx.bClkFreqVal = 0x%x", nxpprofile_ctrl.bClkFreqVal);
+    NXPLOG_FWDNLD_D("gphNxpNciHal_fw_IoctlCtx.bClkFreqVal = 0x%x", nxpprofile_ctrl.bTimeout);
+
+    if ((nxpprofile_ctrl.bClkSrcVal < CLK_SRC_XTAL) ||
+            (nxpprofile_ctrl.bClkSrcVal > CLK_SRC_PLL))
+    {
+        NXPLOG_FWDNLD_E("Clock source value is wrong in config file, setting it as default");
+        nxpprofile_ctrl.bClkSrcVal = NXP_SYS_CLK_SRC_SEL;
+    }
+    if ((nxpprofile_ctrl.bClkFreqVal < CLK_FREQ_13MHZ) ||
+            (nxpprofile_ctrl.bClkFreqVal > CLK_FREQ_52MHZ))
+    {
+        NXPLOG_FWDNLD_E("Clock frequency value is wrong in config file, setting it as default");
+        nxpprofile_ctrl.bClkFreqVal = NXP_SYS_CLK_FREQ_SEL;
+    }
+    if ((nxpprofile_ctrl.bTimeout < CLK_TO_CFG_DEF) || (nxpprofile_ctrl.bTimeout > CLK_TO_CFG_MAX))
+    {
+        NXPLOG_FWDNLD_E("Clock timeout value is wrong in config file, setting it as default");
+        nxpprofile_ctrl.bTimeout = CLK_TO_CFG_DEF;
+    }
+
+}
+
+/******************************************************************************
+ * Function         phNxpNciHal_txNfccClockSetCmd
+ *
+ * Description      This function sends NCI set config cmd to NFC controller
+ *                  for configuration of PLL and DPLL clock
+ *
+ * Returns          void.
+ *
+ ******************************************************************************/
+static void phNxpNciHal_txNfccClockSetCmd(void)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
-    int retryCount = 0;
 
+#if(NFC_NXP_CHIP_TYPE == PN553)
+    static uint8_t set_clock_cmd[] = {0x20, 0x02, 0x05, 0x01, 0xA0, 0x03, 0x01, 0x08};
+    unsigned long  clockSource, frequency;
+    uint32_t pllSetRetryCount = 3, dpllSetRetryCount = 3;
+    uint8_t pCmd4PllSetting[15] = {0x00, 0x00,};
+    uint8_t pCmd4DpllSetting[15] = {0x00, 0x00,};
+    uint32_t pllCmdLen, dpllCmdLen;
+    int srcCfgFound, freqCfgFound;
+
+    srcCfgFound = (GetNxpNumValue(NAME_NXP_SYS_CLK_SRC_SEL, &clockSource, sizeof(clockSource)) > 0);
+
+    freqCfgFound = (GetNxpNumValue(NAME_NXP_SYS_CLK_FREQ_SEL, &frequency, sizeof(frequency)) > 0);
+
+    NXPLOG_NCIHAL_D("%s : clock source = %lu, frequency = %lu", __FUNCTION__, clockSource, frequency);
+
+    if(srcCfgFound && freqCfgFound && (clockSource == CLK_SRC_PLL))
+    {
+         phNxpNciClock.isClockSet = TRUE;
+
+        switch(frequency)
+        {
+            case CLK_FREQ_13MHZ:
+                {
+                    NXPLOG_NCIHAL_D("PLL setting for CLK_FREQ_13MHZ");
+                    uint8_t cmd4PllSetting13MHz[] = SET_CONFIG_CMD_PLL_13MHZ;
+                    memcpy(pCmd4PllSetting, cmd4PllSetting13MHz, sizeof(cmd4PllSetting13MHz));
+                    pllCmdLen = sizeof(cmd4PllSetting13MHz);
+
+                    uint8_t cmd4DpllSetting13MHz[] = SET_CONFIG_CMD_DPLL_13MHZ;
+                    memcpy(pCmd4DpllSetting, cmd4DpllSetting13MHz, sizeof(cmd4DpllSetting13MHz));
+                    dpllCmdLen = sizeof(cmd4DpllSetting13MHz);
+                }
+                break;
+
+            case CLK_FREQ_19_2MHZ:
+                {
+                    NXPLOG_NCIHAL_D("PLL setting for CLK_FREQ_19_2MHZ");
+                    uint8_t cmd4PllSetting19_2MHz[] = SET_CONFIG_CMD_PLL_19_2MHZ;
+                    memcpy(pCmd4PllSetting, cmd4PllSetting19_2MHz, sizeof(cmd4PllSetting19_2MHz));
+                    pllCmdLen = sizeof(cmd4PllSetting19_2MHz);
+
+                    uint8_t cmd4DpllSetting19_2MHz[] = SET_CONFIG_CMD_DPLL_19_2MHZ;
+                    memcpy(pCmd4DpllSetting, cmd4DpllSetting19_2MHz, sizeof(cmd4DpllSetting19_2MHz));
+                    dpllCmdLen = sizeof(cmd4DpllSetting19_2MHz);
+                }
+                break;
+
+            case CLK_FREQ_24MHZ:
+                {
+                    NXPLOG_NCIHAL_D("PLL setting for CLK_FREQ_24MHZ");
+                    uint8_t cmd4PllSetting24MHz[] = SET_CONFIG_CMD_PLL_24MHZ;
+                    memcpy(pCmd4PllSetting, cmd4PllSetting24MHz, sizeof(cmd4PllSetting24MHz));
+                    pllCmdLen = sizeof(cmd4PllSetting24MHz);
+
+                    uint8_t cmd4DpllSetting24MHz[] = SET_CONFIG_CMD_DPLL_24MHZ;
+                    memcpy(pCmd4DpllSetting, cmd4DpllSetting24MHz, sizeof(cmd4DpllSetting24MHz));
+                    dpllCmdLen = sizeof(cmd4DpllSetting24MHz);
+                }
+                break;
+
+            case CLK_FREQ_26MHZ:
+                {
+                    NXPLOG_NCIHAL_D("PLL setting for CLK_FREQ_26MHZ");
+                    uint8_t cmd4PllSetting26MHz[] = SET_CONFIG_CMD_PLL_26MHZ;
+                    memcpy(pCmd4PllSetting, cmd4PllSetting26MHz, sizeof(cmd4PllSetting26MHz));
+                    pllCmdLen = sizeof(cmd4PllSetting26MHz);
+
+                    uint8_t cmd4DpllSetting26MHz[] = SET_CONFIG_CMD_DPLL_26MHZ;
+                    memcpy(pCmd4DpllSetting, cmd4DpllSetting26MHz, sizeof(cmd4DpllSetting26MHz));
+                    dpllCmdLen = sizeof(cmd4DpllSetting26MHz);
+                }
+                break;
+            case CLK_FREQ_32MHZ:
+                {
+                    NXPLOG_NCIHAL_D("PLL setting for CLK_FREQ_32MHZ");
+                    uint8_t cmd4PllSetting32MHz[] = SET_CONFIG_CMD_PLL_32MHZ;
+                    memcpy(pCmd4PllSetting, cmd4PllSetting32MHz, sizeof(cmd4PllSetting32MHz));
+                    pllCmdLen = sizeof(cmd4PllSetting32MHz);
+
+                    uint8_t cmd4DpllSetting32MHz[] = SET_CONFIG_CMD_DPLL_32MHZ;
+                    memcpy(pCmd4DpllSetting, cmd4DpllSetting32MHz, sizeof(cmd4DpllSetting32MHz));
+                    dpllCmdLen = sizeof(cmd4DpllSetting32MHz);
+                }
+                break;
+
+            case CLK_FREQ_38_4MHZ:
+                {
+                    NXPLOG_NCIHAL_D("PLL setting for CLK_FREQ_38_4MHZ");
+                    uint8_t cmd4PllSetting38_4MHz[] = SET_CONFIG_CMD_PLL_38_4MHZ;
+                    memcpy(pCmd4PllSetting, cmd4PllSetting38_4MHz, sizeof(cmd4PllSetting38_4MHz));
+                    pllCmdLen = sizeof(cmd4PllSetting38_4MHz);
+
+                    uint8_t cmd4DpllSetting38_4MHz[] = SET_CONFIG_CMD_DPLL_38_4MHZ;
+                    memcpy(pCmd4DpllSetting, cmd4DpllSetting38_4MHz, sizeof(cmd4DpllSetting38_4MHz));
+                    dpllCmdLen = sizeof(cmd4DpllSetting38_4MHz);
+                }
+                break;
+
+            default:
+                phNxpNciClock.isClockSet = FALSE;
+                NXPLOG_NCIHAL_E("ERROR: Invalid clock frequency!!");
+                return;
+        }
+    }
+    switch(clockSource)
+    {
+        case CLK_SRC_PLL:
+            while(status != NFCSTATUS_SUCCESS && pllSetRetryCount -- > 0)
+                status = phNxpNciHal_send_ext_cmd(pllCmdLen, pCmd4PllSetting);
+
+            status = NFCSTATUS_FAILED;
+
+            while(status != NFCSTATUS_SUCCESS && dpllSetRetryCount -- > 0)
+                status = phNxpNciHal_send_ext_cmd(dpllCmdLen, pCmd4DpllSetting);
+
+            break;
+
+        case CLK_SRC_XTAL:
+            status = phNxpNciHal_send_ext_cmd(sizeof(set_clock_cmd), set_clock_cmd);
+            if (status != NFCSTATUS_SUCCESS)
+            {
+                NXPLOG_NCIHAL_E("XTAL clock setting failed !!");
+            }
+            break;
+
+        default:            NXPLOG_NCIHAL_E("Wrong clock source. Dont apply any modification");
+                            return;
+    }
+    phNxpNciClock.isClockSet = FALSE;
+    if(status == NFCSTATUS_SUCCESS && phNxpNciClock.p_rx_data[3] == NFCSTATUS_SUCCESS)
+    {
+        NXPLOG_NCIHAL_D("PLL and DPLL settings applied successfully");
+    }
+    return;
+
+#else
+    NXPLOG_NCIHAL_D("Clock setting older version");
+
+int retryCount = 0;
 retrySetclock:
     phNxpNciClock.isClockSet = TRUE;
     if (nxpprofile_ctrl.bClkSrcVal == CLK_SRC_PLL)
     {
-#if(NFC_NXP_CHIP_TYPE == PN553)
-        static uint8_t set_clock_cmd[] = {0x20,0x02, 0x1F, 0x04, 0xA0, 0x03, 0x01, 0x11,
-                                                                 0xA0, 0x04, 0x01, 0x01,
-                                                                 0xA0, 0x20, 0x08, 0x88, 0x51, 0xE3,0x02, 0xB8, 0x21, 0xE1, 0x02,
-                                                                 0xA0, 0x26, 0x08, 0x88, 0x01, 0xE2,0x02, 0xF0, 0x00, 0xA2, 0x01};
-        uint8_t param_clock_src = 0x00;
-#else
         static uint8_t set_clock_cmd[] = {0x20, 0x02,0x09, 0x02, 0xA0, 0x03, 0x01, 0x11,
                                                                0xA0, 0x04, 0x01, 0x01};
+
         uint8_t param_clock_src = CLK_SRC_PLL;
         param_clock_src = param_clock_src << 3;
-#endif
 
         if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_13MHZ)
         {
             param_clock_src |= 0x00;
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x08, 0x52, 0xA2, 0x02, 0x30, 0x01, 0xE1, 0x02,
-                                       0xA0, 0x26, 0x08, 0x40, 0x42, 0xA3, 0x02, 0x88, 0x01, 0xE2, 0x02};
-            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
-#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_19_2MHZ)
         {
             param_clock_src |= 0x01;
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x88, 0x51, 0xE3, 0x02, 0xB8, 0x21, 0xE1, 0x02,
-                                       0xA0, 0x26, 0x08, 0x88, 0x01, 0xE2, 0x02, 0xF0, 0x00, 0xA2, 0x01};
-            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
-#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_24MHZ)
         {
             param_clock_src |= 0x02;
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x28, 0xC2, 0xA2, 0x83, 0x88, 0x11, 0xE1, 0x02,
-                                       0xA0, 0x26, 0x08, 0x38, 0x41, 0xD3, 0x02, 0x88, 0x01, 0xE2, 0x02};
-            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
-#endif
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_26MHZ)
         {
             param_clock_src |= 0x03;
-
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            char tmp_pllclock_cmd[] = {0xA0, 0x26, 0x08, 0x20, 0x41, 0xA3, 0x01, 0x88, 0x01, 0xE2, 0x02,
-                                       0xA0, 0x20, 0x08, 0x08, 0x52, 0xA2, 0x82, 0x30, 0x01, 0xE1, 0x02};
-            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
-#endif
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_32MHZ)
+        {
+            param_clock_src |= 0x04;
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_38_4MHZ)
         {
-            param_clock_src |= 0x04;
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x88, 0x51, 0xE3, 0x82, 0x88, 0x21, 0xE1, 0x02,
-                                       0xA0, 0x26, 0x08, 0x88, 0x01, 0xE2, 0x82, 0xF0, 0x00, 0xA2, 0x01};
-            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
-#endif
+            param_clock_src |= 0x05;
         }
         else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_52MHZ)
         {
-            param_clock_src |= 0x05;
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            char tmp_pllclock_cmd[] = {0xA0, 0x20, 0x08, 0x08, 0xD1, 0xA1, 0x81, 0x08, 0x21, 0xE1, 0x02,
-                                       0xA0, 0x26, 0x08, 0x38, 0x41, 0xA3, 0x81, 0x88, 0x01, 0xE2, 0x02};
-            memcpy(&set_clock_cmd[12], tmp_pllclock_cmd, sizeof(tmp_pllclock_cmd));
-#endif
+            param_clock_src |= 0x06;
         }
         else
         {
             NXPLOG_NCIHAL_E("Wrong clock freq, send default PLL@19.2MHz");
-#if(NFC_NXP_CHIP_TYPE == PN553)
-            param_clock_src = 0x01;
-#else
             param_clock_src = 0x11;
-#endif
+
         }
 
         set_clock_cmd[7] = param_clock_src;
@@ -3439,10 +3499,76 @@ retrySetclock:
 //            abort ();
        }
     }
+#endif
+}
+/******************************************************************************
+ * Function         phNxpNciHal_determineConfiguredClockSrc
+ *
+ * Description      This function determines and encodes clock source based on
+ *                  clock frequency
+ *
+ * Returns          encoded form of clock source
+ *
+ *****************************************************************************/
+int   phNxpNciHal_determineConfiguredClockSrc()
+{
+    NFCSTATUS status = NFCSTATUS_FAILED;
+    uint8_t param_clock_src = CLK_SRC_PLL;
+    if (nxpprofile_ctrl.bClkSrcVal == CLK_SRC_PLL)
+    {
+
+#if(NFC_NXP_CHIP_TYPE != PN553)
+        param_clock_src = param_clock_src << 3;
+#endif
+
+        if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_13MHZ)
+        {
+            param_clock_src |= 0x00;
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_19_2MHZ)
+        {
+            param_clock_src |= 0x01;
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_24MHZ)
+        {
+            param_clock_src |= 0x02;
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_26MHZ)
+        {
+            param_clock_src |= 0x03;
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_32MHZ)
+        {
+            param_clock_src |= 0x04;
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_38_4MHZ)
+        {
+            param_clock_src |= 0x05;
+        }
+        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_52MHZ)
+        {
+            param_clock_src |= 0x06;
+        }
+        else
+        {
+            NXPLOG_NCIHAL_E("Wrong clock freq, send default PLL@19.2MHz");
+            param_clock_src = 0x11;
+        }
+    }
+    else if(nxpprofile_ctrl.bClkSrcVal == CLK_SRC_XTAL)
+    {
+        param_clock_src = 0x08;
+
+    }
+    else
+    {
+        NXPLOG_NCIHAL_E("Wrong clock source. Dont apply any modification")
+    }
+    return param_clock_src;
 }
 
 /******************************************************************************
- * Function         phNxpNciHal_check_clock_config
+ * Function         phNxpNciHal_nfccClockCfgApply
  *
  * Description      This function is called after successfull download
  *                  to check if clock settings in config file and chip
@@ -3451,30 +3577,37 @@ retrySetclock:
  * Returns          void.
  *
  ******************************************************************************/
-NFCSTATUS phNxpNciHal_check_clock_config(void)
+NFCSTATUS phNxpNciHal_nfccClockCfgApply(void)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
-    uint8_t param_clock_src;
-    static uint8_t get_clock_cmd[] = {0x20, 0x03,0x0B, 0x05, 0xA0, 0x02,
-            0xA0, 0x03, 0xA0, 0x04 ,0xA0, 0x20, 0xA0 , 0x26};
+    uint8_t nfcc_cfg_clock_src, nfcc_cur_clock_src;
+    uint8_t nfcc_clock_set_needed;
+
+    static uint8_t get_clock_cmd[] = {0x20, 0x03,0x07, 0x03, 0xA0, 0x02,
+            0xA0, 0x03, 0xA0, 0x04};
+
+    phNxpNciHal_nfccClockCfgRead();
+
     phNxpNciClock.isClockSet = TRUE;
-    phNxpNciHal_get_clk_freq();
     status = phNxpNciHal_send_ext_cmd(sizeof(get_clock_cmd),get_clock_cmd);
+    phNxpNciClock.isClockSet = FALSE;
 
     if(status != NFCSTATUS_SUCCESS)
     {
         NXPLOG_NCIHAL_E("unable to retrieve get_clk_src_sel");
         return status;
     }
-    param_clock_src = check_config_parameter();
-    if( phNxpNciClock.p_rx_data[12] == param_clock_src &&  phNxpNciClock.p_rx_data[16] == nxpprofile_ctrl.bTimeout)
-    {
-        phNxpNciClock.issetConfig = FALSE;
-    }else {
-        phNxpNciClock.issetConfig = TRUE;
-    }
-    phNxpNciClock.isClockSet = FALSE;
+    nfcc_cfg_clock_src = phNxpNciHal_determineConfiguredClockSrc();
+    nfcc_cur_clock_src = phNxpNciClock.p_rx_data[12];
 
+    nfcc_clock_set_needed = (nfcc_cfg_clock_src != nfcc_cur_clock_src ||
+                                phNxpNciClock.p_rx_data[16] == nxpprofile_ctrl.bTimeout) ?\
+                                TRUE : FALSE;
+    if(nfcc_clock_set_needed)
+    {
+        NXPLOG_NCIHAL_D ("Setting Clock Source and Frequency");
+        phNxpNciHal_txNfccClockSetCmd();
+    }
     return status;
 }
 
@@ -3595,59 +3728,6 @@ retry_send_ext:
 
     return status;
 }
-
-int  check_config_parameter()
-{
-    NFCSTATUS status = NFCSTATUS_FAILED;
-    uint8_t param_clock_src = CLK_SRC_PLL;
-    if (nxpprofile_ctrl.bClkSrcVal == CLK_SRC_PLL)
-    {
-
-#if(NFC_NXP_CHIP_TYPE != PN553)
-        param_clock_src = param_clock_src << 3;
-#endif
-
-        if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_13MHZ)
-        {
-            param_clock_src |= 0x00;
-        }
-        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_19_2MHZ)
-        {
-            param_clock_src |= 0x01;
-        }
-        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_24MHZ)
-        {
-            param_clock_src |= 0x02;
-        }
-        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_26MHZ)
-        {
-            param_clock_src |= 0x03;
-        }
-        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_38_4MHZ)
-        {
-            param_clock_src |= 0x04;
-        }
-        else if (nxpprofile_ctrl.bClkFreqVal == CLK_FREQ_52MHZ)
-        {
-            param_clock_src |= 0x05;
-        }
-        else
-        {
-            NXPLOG_NCIHAL_E("Wrong clock freq, send default PLL@19.2MHz");
-            param_clock_src = 0x11;
-        }
-    }
-    else if(nxpprofile_ctrl.bClkSrcVal == CLK_SRC_XTAL)
-    {
-        param_clock_src = 0x08;
-
-    }
-    else
-    {
-        NXPLOG_NCIHAL_E("Wrong clock source. Dont apply any modification")
-    }
-    return param_clock_src;
-}
 /******************************************************************************
  * Function         phNxpNciHal_enable_i2c_fragmentation
  *
@@ -3748,14 +3828,16 @@ static void phNxpNciHal_check_factory_reset(void)
     NFCSTATUS status = NFCSTATUS_FAILED;
     const char config_eseinfo_path[] = "/data/nfc/nfaStorage.bin1";
 #if(NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH == TRUE || NXP_NFCC_DYNAMIC_DUAL_UICC == TRUE)
-    static uint8_t reset_ese_session_identity_set[] = { 0x20, 0x02, 0x22, 0x03,
-                                          0xA0, 0xEA, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                          0xA0, 0x1E, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                          0xA0, 0xEB, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+   static uint8_t reset_ese_session_identity_set[] = {
+    0x20, 0x02, 0x22, 0x03, 0xA0, 0xEA, 0x08, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xA0, 0x1E, 0x08, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xA0, 0xEB, 0x08, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #else
-    static uint8_t reset_ese_session_identity_set[] = { 0x20, 0x02, 0x17, 0x02,
-                                      0xA0, 0xEA, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                      0xA0, 0xEB, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  static uint8_t reset_ese_session_identity_set[] = {
+    0x20, 0x02, 0x17, 0x02, 0xA0, 0xEA, 0x08, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xA0, 0xEB, 0x08,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 #endif
 
 #ifdef PN547C2_FACTORY_RESET_DEBUG

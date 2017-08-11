@@ -1831,6 +1831,11 @@ static void nfa_dm_poll_disc_cback (tNFA_DM_RF_DISC_EVT event, tNFC_DISCOVER *p_
                 {
 #endif
 #if ((NXP_EXTNS == TRUE) && (NXP_NFCC_P2P_ENABLED == FALSE))
+                    if (nfa_dm_cb.p_activate_ntf != NULL)
+                    {
+                        GKI_freebuf (nfa_dm_cb.p_activate_ntf);
+                        nfa_dm_cb.p_activate_ntf = NULL;
+                    }
                     nfa_dm_rf_deactivate (NFA_DEACTIVATE_TYPE_DISCOVERY);
 #else
                     if (!(nfa_dm_cb.flags & NFA_DM_FLAGS_P2P_PAUSED))

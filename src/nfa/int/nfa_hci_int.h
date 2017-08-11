@@ -582,6 +582,9 @@ extern void nfa_hciu_set_nfceeid_config_mask(UINT8 event, UINT8 host_id);
 extern void nfa_hciu_set_nfceeid_poll_mask(UINT8 event, UINT8 host_id);
 extern BOOLEAN nfa_hciu_check_any_host_reset_pending();
 extern tNFA_STATUS nfa_hci_api_config_nfcee (UINT8 hostId);
+#if (NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY == TRUE)
+extern tNFA_STATUS nfa_hci_getApduAndConnectivity_PipeStatus(void);
+#endif
 #if (NXP_UICC_HANDLE_CLEAR_ALL_PIPES == TRUE)
 void nfa_hci_handle_clear_all_pipes_evt(UINT8 source_host);
 #endif
