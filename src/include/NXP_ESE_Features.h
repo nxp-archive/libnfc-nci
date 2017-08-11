@@ -64,6 +64,7 @@
     #define NXP_ESE_DWP_SPI_SYNC_ENABLE           TRUE
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          FALSE
     #define NXP_ESE_FORCE_ENABLE                  TRUE
+    #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     FALSE
 #elif(NFC_NXP_CHIP_TYPE == PN553)
     #define NFC_NXP_TRIPLE_MODE_PROTECTION        FALSE
     #define NXP_ESE_FELICA_CLT                    FALSE
@@ -88,6 +89,7 @@
     #define NXP_ESE_DWP_SPI_SYNC_ENABLE           FALSE
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          TRUE
     #define NXP_ESE_FORCE_ENABLE                  FALSE
+    #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     TRUE
 #endif
 
 #else /*Else of #if(NFC_NXP_ESE == TRUE)*/
@@ -113,6 +115,7 @@
     #define NXP_UICC_HANDLE_CLEAR_ALL_PIPES       FALSE
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          FALSE
     #define NFC_NXP_GP_CONTINOUS_PROCESSING       FALSE
+    #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     FALSE
 #elif(NFC_NXP_CHIP_TYPE == PN553)
     #define NFC_NXP_TRIPLE_MODE_PROTECTION        FALSE
     #define NXP_ESE_FELICA_CLT                    FALSE
@@ -134,6 +137,7 @@
     #define NXP_UICC_HANDLE_CLEAR_ALL_PIPES       FALSE
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          TRUE
     #define NFC_NXP_GP_CONTINOUS_PROCESSING       FALSE
+    #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     TRUE
 #endif
 
 #endif /*End of #if(NFC_NXP_ESE == TRUE)*/

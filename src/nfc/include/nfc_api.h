@@ -93,7 +93,7 @@
 #define NXP_EN_PN553                    1
 #define NXP_EN_PN80T                    1
 #define NXP_KOS_VER                     (2U) /* NXP android version */
-#define NFC_NXP_MW_VERSION_MAJ          (4U) /* MW Major Version */
+#define NFC_NXP_MW_VERSION_MAJ          (5U) /* MW Major Version */
 #define NFC_NXP_MW_VERSION_MIN          (0U) /* MW Minor Version */
 #endif
 /* 0xE0 ~0xFF are proprietary status codes */
@@ -133,6 +133,8 @@ typedef UINT8 tNFC_STATUS;
 #define NXP_NFC_PROP_MAX_CMD_BUF_SIZE   ((unsigned char)0x40)
 #define NXP_NFC_SET_MSB(x)              (x |= 0x80)
 #define NXP_NFC_RESET_MSB(x)            (x &= 0x7F)
+#define NXP_NFC_ESE_CONN_PIPE_STATUS    ((unsigned char)0x22)
+#define NXP_NFC_ESE_APDU_PIPE_STATUS    ((unsigned char)0x23)
  /**********************************************
   * NFC Config Parameter IDs defined by NXP NFC
   **********************************************/

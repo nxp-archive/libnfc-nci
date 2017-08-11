@@ -90,6 +90,11 @@ static BOOLEAN nfa_hci_api_GetpipeId(UINT8 nfceeId,UINT8 gateId,UINT8 *pipeId);
 static void nfa_hci_poll_session_id_cb (UINT8 event, UINT16 param_len, UINT8 *p_param);
 static void nfa_hci_read_num_nfcee_config_cb(UINT8 event, UINT16 param_len, UINT8 *p_param);
 static tNFA_STATUS nfa_hci_poll_session_id(UINT8 host_type);
+# if(NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY == TRUE)
+static void nfa_hci_get_pipe_state_cb(UINT8 event, UINT16 param_len, UINT8* p_param);
+static void nfa_hci_update_pipe_status(UINT8 gateId, UINT8 pipeId);
+# endif
+#define NFC_ESE_PIPE_INX_DEFAULT 0X00
 #endif
 
 /*******************************************************************************
@@ -3313,4 +3318,159 @@ static BOOLEAN nfa_hci_api_GetpipeId(UINT8 nfceeId,UINT8 gateId,UINT8 *pipeId)
     }
     return status;
 }
+
+#if (NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY == TRUE)
+/*******************************************************************************
+**
+** Function         nfa_hci_getApduAndConnectivity_PipeStatus
+**
+** Description      API to retrieve APDU & Connectivity pipe created status from
+**                  FirmWare
+**
+** Returns          If NCI command is SUCCESS/FAILED
+**
+*******************************************************************************/
+tNFA_STATUS nfa_hci_getApduAndConnectivity_PipeStatus(void)
+{
+    tNFA_STATUS status = NFA_STATUS_OK;
+    UINT8 p_data[NFA_MAX_HCI_CMD_LEN];
+    UINT8 *p = p_data, *parm_len , *num_param;
+    memset(p_data, 0, sizeof(p_data));
+    NCI_MSG_BLD_HDR0 (p, NCI_MT_CMD, NCI_GID_CORE);
+    NCI_MSG_BLD_HDR1 (p, NCI_MSG_CORE_GET_CONFIG);
+    parm_len  = p++;
+    num_param = p++;
+    UINT8_TO_STREAM (p, NXP_NFC_SET_CONFIG_PARAM_EXT);
+    UINT8_TO_STREAM (p, NXP_NFC_ESE_APDU_PIPE_STATUS);
+    (*num_param)++;
+    UINT8_TO_STREAM (p, NXP_NFC_SET_CONFIG_PARAM_EXT);
+    UINT8_TO_STREAM (p, NXP_NFC_ESE_CONN_PIPE_STATUS);
+    (*num_param)++;
+
+    *parm_len = (p - num_param);
+    if(*num_param)
+    {
+        status = nfa_hciu_send_raw_cmd(p-p_data, p_data, nfa_hci_get_pipe_state_cb);
+    }
+    NFA_TRACE_DEBUG1 ("nfa_hci_getApduConnectivity_PipeStatus %x",*num_param);
+
+    return status;
+}
+
+/*******************************************************************************
+**
+** Function         nfa_hci_get_pipe_state_cb
+**
+** Description      Callback API to retrieve APDU & Connectivity pipe created
+**                  status from FirmWare
+**
+** Returns          None
+**
+*******************************************************************************/
+static void nfa_hci_get_pipe_state_cb(UINT8 event, UINT16 param_len, UINT8* p_param)
+{
+    UINT8 num_param_id = 0x00, xx;
+    UINT8 NFA_PARAM_ID_INDEX = 0x04;
+    UINT8 param_id1 = 0x00;
+    UINT8 param_id2 = 0x00;
+    UINT8 status = 0x00;
+
+    if(!p_param){
+        NFA_TRACE_DEBUG0 ("Invalid Param nfa_hci_get_pipe_state_cb()");
+        return;
+    }
+
+    nfa_sys_stop_timer (&nfa_hci_cb.timer);
+    p_param += NFA_PARAM_ID_INDEX;
+    STREAM_TO_UINT8(num_param_id , p_param);
+    while(num_param_id)
+    {
+        STREAM_TO_UINT8(param_id1 , p_param);
+        STREAM_TO_UINT8(param_id2 , p_param);
+        p_param++;
+        STREAM_TO_UINT8(status , p_param);
+        if(param_id1 == NXP_NFC_SET_CONFIG_PARAM_EXT
+                && param_id2 == NXP_NFC_ESE_APDU_PIPE_STATUS)
+        {
+            /*Update eSE APDU pipe status*/
+            if(status == TRUE)
+            {
+                /*UINT8 local_gate, UINT8 pipe_id, UINT8 dest_host, UINT8 dest_gate*/
+                if(!nfa_hci_api_IspipePresent(NFA_HCI_HOST_ID_ESE, NFA_HCI_ETSI12_APDU_GATE))
+                {
+                    nfa_hci_update_pipe_status(NFA_HCI_ETSI12_APDU_GATE, NFA_HCI_APDU_PIPE);
+                    if(nfa_hciu_find_gate_by_gid (NFA_HCI_ETSI12_APDU_GATE) == NULL)
+                    {
+                        tNFA_HCI_DYN_GATE *pg;
+                        UINT8 xx;
+                        for (xx = 0, pg = nfa_hci_cb.cfg.dyn_gates; xx < NFA_HCI_MAX_GATE_CB; xx++, pg++)
+                        {
+                            if (!pg->gate_id)
+                            {
+                                /* Found a free gate control block */
+                                pg->gate_id       = NFA_HCI_ETSI12_APDU_GATE;
+                                pg->gate_owner    = NFA_HANDLE_GROUP_HCI;
+                                pg->pipe_inx_mask = NFC_ESE_PIPE_INX_DEFAULT;
+
+                                NFA_TRACE_DEBUG2 ("nfa_hci_alloc_apdu_gate id:%d  app_handle: 0x%04x",
+                                NFA_HCI_ETSI12_APDU_GATE, NFA_HANDLE_GROUP_HCI);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                nfa_hciu_release_pipe (NFA_HCI_APDU_PIPE);
+            }
+        }
+        else if(param_id1 == NXP_NFC_SET_CONFIG_PARAM_EXT
+                && param_id2 == NXP_NFC_ESE_CONN_PIPE_STATUS)
+        {
+            /*Update eSE Connectivity pipe status*/
+            if(status == TRUE)
+            {
+                if(!nfa_hci_api_IspipePresent(NFA_HCI_HOST_ID_ESE, NFA_HCI_CONNECTIVITY_GATE))
+                {
+                    nfa_hci_update_pipe_status(NFA_HCI_CONNECTIVITY_GATE, NFA_HCI_CONN_ESE_PIPE);
+                }
+            }
+            else
+            {
+                nfa_hciu_release_pipe (NFA_HCI_CONN_ESE_PIPE);
+            }
+        }
+        num_param_id--;
+    }
+}
+
+/*******************************************************************************
+**
+** Function         nfa_hci_update_pipe_status
+**
+** Description      API to update APDU & Connectivity pipe hci_cfg status
+**
+** Returns          None
+**
+*******************************************************************************/
+static void nfa_hci_update_pipe_status(UINT8 gateId, UINT8 pipeId)
+{
+    UINT8 count = 0;
+    nfa_hciu_add_pipe_to_static_gate(gateId, pipeId, NFA_HCI_HOST_ID_ESE, gateId);
+
+    /*Set the pipe status HCI_OPENED*/
+    for (count = 0;count < NFA_HCI_MAX_PIPE_CB;count++)
+    {
+        if(((nfa_hci_cb.cfg.dyn_pipes[count].dest_host) == NFA_HCI_HOST_ID_ESE) &&
+        ((nfa_hci_cb.cfg.dyn_pipes[count].dest_gate) == gateId)
+        &&((nfa_hci_cb.cfg.dyn_pipes[count].local_gate) == gateId))
+        {
+            NFA_TRACE_DEBUG1 ("Set the pipe state to open  -- %d !!!",nfa_hci_cb.cfg.dyn_pipes[count].pipe_id);
+            nfa_hci_cb.cfg.dyn_pipes[count].pipe_state = NFA_HCI_PIPE_OPENED;
+            break;
+        }
+    }
+}
+#endif
 #endif
