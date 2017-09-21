@@ -1032,7 +1032,7 @@ void nfa_ee_api_remove_aid(tNFA_EE_MSG *p_data)
             memset(&p_cb->aid_pwr_cfg[0], 0x00, max_aid_entries);
             memset(&p_cb->aid_rt_info[0], 0x00, max_aid_entries);
 #else
-            memset(&p_cb->aid_cfg[0],0x00, sizeof(p_cb->aid_cfg));
+            memset(&p_cb->aid_cfg[0],0x00, NFA_EE_MAX_AID_CFG_LEN);
             memset(&p_cb->aid_len[0], 0x00, NFA_EE_MAX_AID_ENTRIES);
             memset(&p_cb->aid_pwr_cfg[0], 0x00, NFA_EE_MAX_AID_ENTRIES);
             memset(&p_cb->aid_rt_info[0], 0x00, NFA_EE_MAX_AID_ENTRIES);
@@ -1049,7 +1049,7 @@ void nfa_ee_api_remove_aid(tNFA_EE_MSG *p_data)
         memset(&p_ecb->aid_pwr_cfg[0], 0x00, max_aid_entries);
         memset(&p_ecb->aid_rt_info[0], 0x00, max_aid_entries);
 #else
-        memset(&p_ecb->aid_cfg[0],0x00, sizeof(p_ecb->aid_cfg));
+        memset(&p_ecb->aid_cfg[0],0x00, NFA_EE_MAX_AID_CFG_LEN);
         memset(&p_ecb->aid_len[0], 0x00, NFA_EE_MAX_AID_ENTRIES);
         memset(&p_ecb->aid_pwr_cfg[0], 0x00, NFA_EE_MAX_AID_ENTRIES);
         memset(&p_ecb->aid_rt_info[0], 0x00, NFA_EE_MAX_AID_ENTRIES);
@@ -2441,7 +2441,7 @@ tNFA_STATUS nfa_ee_route_add_one_ecb(tNFA_EE_ECB *p_cb, int *p_max_len, BOOLEAN 
                     *pp  |= route_blacklist_mask;
 #endif
                 }
-                *pp++;
+                pp++;
                 *pp++   = len + 2;
                 *pp++   = p_cb->aid_rt_loc[xx];
                 *pp++   = p_cb->aid_pwr_cfg[xx];
@@ -2509,7 +2509,7 @@ tNFA_STATUS nfa_ee_route_add_one_ecb(tNFA_EE_ECB *p_cb, int *p_max_len, BOOLEAN 
                 *proto_pp  |= route_blacklist_mask;
             }
 #endif
-            *proto_pp++;
+            proto_pp++;
             *proto_pp++   = 3;
             *proto_pp++   = p_cb->nfcee_id;
             *proto_pp++   = power_cfg;

@@ -181,13 +181,13 @@ void nfc_ncif_cmd_timeout (void)
         buffer[1] = Last NFCC NCI RF State, 0:IDLE 1:DISCOVERY
         buffer[2] = Length of discovery command to be sent as a part of recovery.
         buffer[3~34] = Last Discovery command(including phase data).(32 byte)
-        buffer[35] = Length of last command.
-        buffer[36~254] = Last Command /or Last Command including Data.
-        buffer[255] = Last screen state
+        buffer[35] = Indicator 0: No command to be sent after Recovery 1: Command available to be sent after recovery
+        buffer[36~294] = Last Command /or Last Command including Data.
+        buffer[295] = Last screen state
         */
         UINT8 *buffer           = NULL;
         tNFC_CONN_CB *p_cb      = NULL;
-        UINT16 bufflen          = 0x100;
+        UINT16 bufflen          = 36 + 258 + 2; //Initial data + max command size + 1 extra buffer + 1 screenState
         UINT16 fw_dwnld_status  = NFC_STATUS_FAILED;
         tNFC_STATUS status      = NFC_STATUS_FAILED;
         tNFC_FWUpdate_Info_t fw_update_inf;
@@ -208,7 +208,7 @@ void nfc_ncif_cmd_timeout (void)
         buffer[0] = 0x01;
 
         /*Set the last screen state*/
-        buffer[255] = gScreenState;
+        buffer[295] = gScreenState;
 
         NFC_TRACE_DEBUG1 ("MW last RF discovery flags 0x%x", nfa_dm_cb.disc_cb.disc_flags);
         NFC_TRACE_DEBUG1 ("MW last RF discovery state 0x%x", nfa_dm_cb.disc_cb.disc_state);
@@ -286,8 +286,8 @@ void nfc_ncif_cmd_timeout (void)
                    (nfc_cb.last_cmd_buf[0] == 0x01 && nfc_cb.last_cmd_buf[1] == 0x00) )                        /*DEACTIVATE TO IDLE*/
                )
         {
-            /*Set the length of last command*/
-            buffer[35] = nfc_cb.cmd_size + 3;  /*HDR(2) + Length(1) + Cmd data(n)*/
+            /*Set indicating last command is available to be sent after recovery*/
+           buffer[35] = 0x01;
             /*Copy the last HEADER*/
             memcpy(&buffer[36], nfc_cb.last_hdr, NFC_SAVED_HDR_SIZE);
             /*Copy the last command*/
@@ -295,8 +295,8 @@ void nfc_ncif_cmd_timeout (void)
         }
         else /*either CORE_RESET or CORE_INIT was the last command*/
         {
-            /*full length of command*/
-            buffer[35] = 2 + 1 + nfc_cb.cmd_size;  /*HDR(2) + Length(1) + Command data size(n)*/
+            /*Set indicating last command is available to be sent after recovery*/
+            buffer[35] = 0x01;
 
             memcpy(&buffer[36], nfc_cb.last_hdr, NFC_SAVED_HDR_SIZE);
 
@@ -339,7 +339,8 @@ void nfc_ncif_cmd_timeout (void)
                 }
             }
         }
-        NFC_TRACE_DEBUG3 ("nfc_ncif_cmd_timeout(): Indicator:0x%X disc cmd len:0x%X last cmd len:0x%X", buffer[0], buffer[2], buffer[35]);
+        NFC_TRACE_DEBUG3 ("nfc_ncif_cmd_timeout(): Indicator:0x%02X disc cmd len:0x%02X last cmd ""len:0x%02X",
+        buffer[0], buffer[2], buffer[38]);
         nfc_cb.p_hal->core_initialized (buffer);
         if(buffer != NULL) free(buffer);
         NFC_TRACE_DEBUG0 ("nfc_ncif_cmd_timeout(): exit");
@@ -491,7 +492,7 @@ UINT8 nfc_ncif_send_data (tNFC_CONN_CB *p_cb, BT_HDR *p_data)
     p_data = (BT_HDR *)GKI_getfirst (&p_cb->tx_q);
 
     /* post data fragment to NCIT task as credits are available */
-    while (p_data && (p_data->len >= 0) && (p_cb->num_buff > 0))
+    while (p_data && (p_cb->num_buff > 0))
     {
         if (p_data->len <= buffer_size)
         {
@@ -1203,8 +1204,7 @@ void nfc_ncif_onWiredModeHold_timeout()
 void nfc_ncif_resume_dwp_wired_mode()
 {
     NFC_TRACE_DEBUG0("nfc_ncif_resume_dwp_wired_mode");
-    tNFC_CONN_CB *p_cb;
-    p_cb = nfc_find_conn_cb_by_conn_id(nfa_hci_cb.conn_id);
+    tNFC_CONN_CB *p_cb = nfc_find_conn_cb_by_conn_id(nfa_hci_cb.conn_id);
     nfc_cb.bBlkPwrlinkAndModeSetCmd  = FALSE;
     nfc_cb.bIssueModeSetCmd = FALSE;
     if(nfc_cb.pwr_link_cmd.bPwrLinkCmdRequested)
@@ -1215,7 +1215,7 @@ void nfc_ncif_resume_dwp_wired_mode()
         if(!nfc_cb.bCeActivatedeSE)
             nfc_cb.bIssueModeSetCmd = TRUE;
     }
-    else if(((nfc_cb.bSetmodeOnReq) || (!GKI_queue_is_empty(&p_cb->tx_q))) && (!nfc_cb.bCeActivatedeSE))
+    else if(((nfc_cb.bSetmodeOnReq) || (p_cb && (!GKI_queue_is_empty(&p_cb->tx_q)))) && (!nfc_cb.bCeActivatedeSE))
     {
         NFC_TRACE_DEBUG0("mode set cmd to send");
         nfc_cb.bSetmodeOnReq = TRUE;
@@ -1838,6 +1838,16 @@ void nfc_ncif_proc_deactivate (UINT8 status, UINT8 deact_type, BOOLEAN is_ntf)
         (*p_cb->p_cback) (NFC_RF_CONN_ID, NFC_DEACTIVATE_CEVT, (tNFC_CONN *) p_deact);
 
 #if (NXP_EXTNS == TRUE)
+#if(NXP_ESE_DUAL_MODE_PRIO_SCHEME == NXP_ESE_WIRED_MODE_RESUME)
+    if((deact_type != NFC_DEACTIVATE_TYPE_SLEEP) && is_ntf)
+    {
+        if(nfc_cb.bBlockWiredMode)
+        {
+            nfc_stop_timer(&nfc_cb.rf_filed_event_timeout_timer);
+            nfc_start_timer(&nfc_cb.rf_filed_event_timeout_timer, (UINT16)(NFC_TTYPE_NCI_WAIT_RF_FIELD_NTF), NFC_NCI_RFFIELD_EVT_TIMEOUT);
+        }
+    }
+#endif
     if (p_t3tcb->poll_timer.in_use)
     {
         NFC_TRACE_DEBUG1 ("%s: stopping t3t polling timer", __func__);
