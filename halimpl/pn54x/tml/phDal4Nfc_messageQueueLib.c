@@ -238,7 +238,10 @@ int phDal4Nfc_msgrcv(intptr_t msqid, phLibNfc_Message_t * msg, long msgtyp, int 
 
     pQueue = (phDal4Nfc_message_queue_t *) msqid;
 
-    sem_wait(&pQueue->nProcessSemaphore);
+    if(sem_wait(&pQueue->nProcessSemaphore) != 0)
+    {
+        NXPLOG_TML_E("Failed to wait semaphore (errno=0x%08x)", errno);
+    }
 
     pthread_mutex_lock(&pQueue->nCriticalSectionMutex);
 

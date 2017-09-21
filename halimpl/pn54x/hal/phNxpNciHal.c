@@ -934,7 +934,10 @@ int phNxpNciHal_write(uint16_t data_len, const uint8_t *p_data)
     {
         usleep (10000);
         icode_send_eof = 2;
-        phNxpNciHal_send_ext_cmd (3, cmd_icode_eof);
+        status = phNxpNciHal_send_ext_cmd (3, cmd_icode_eof);
+        if (status != NFCSTATUS_SUCCESS) {
+            NXPLOG_NCIHAL_E("Failed to send icode cmd");
+        }
     }
 
     clean_and_return:
@@ -1218,8 +1221,14 @@ void phNxpNciHal_check_delete_nfaStorage_DHArea()
     else
     {
         ALOGD("%s file present = %s", __FUNCTION__, config_eseinfo_path);
-        remove(config_eseinfo_path);
-        ALOGD("%s Deleting the file present = %s", __FUNCTION__, config_eseinfo_path);
+        if(remove(config_eseinfo_path) != NFCSTATUS_SUCCESS)
+        {
+            ALOGD("%s Fail Deleting the file = %s", __FUNCTION__, config_eseinfo_path);
+        }
+        else
+        {
+            ALOGD("%s Deleting the file present = %s", __FUNCTION__, config_eseinfo_path);
+        }
     }
 }
 
@@ -2091,7 +2100,7 @@ retry_core_init:
         }
 
         // Set the proper screen state
-        switch(p_core_init_rsp_params[255])
+        switch(p_core_init_rsp_params[295])
         {
             case 0x0:
             case 0x3:
@@ -2153,7 +2162,7 @@ retry_core_init:
 
         NXPLOG_NCIHAL_E("Sending last command for Recovery ");
 
-        if(p_core_init_rsp_params[35] > 0)
+        if(p_core_init_rsp_params[35] == 1)
         {  //if length of last command is 0 then it doesn't need to send last command.
             if( !( (p_core_init_rsp_params[36] == 0x21) &&
                    (p_core_init_rsp_params[37] == 0x03) &&
@@ -2167,7 +2176,7 @@ retry_core_init:
                 //if last command is discovery and RF status is also discovery state, then it doesn't need to execute or similarly
                 //if the last command is deactivate to idle and RF status is also idle , no need to execute the command .
              {
-                tmp_len = p_core_init_rsp_params[35];
+                tmp_len = p_core_init_rsp_params[38] + 3; //Field 38 gives length of data + 3 (header and length field)
 
                 /* Check for NXP ext before sending write */
                 status = phNxpNciHal_write_ext(&tmp_len,
@@ -2190,10 +2199,8 @@ retry_core_init:
                     return NFCSTATUS_SUCCESS;
                 }
 
-                p_core_init_rsp_params[35] = (uint8_t)tmp_len;
 
-                status = phNxpNciHal_send_ext_cmd (p_core_init_rsp_params[35],
-                                                          (uint8_t *)&p_core_init_rsp_params[36]);
+                status = phNxpNciHal_send_ext_cmd (tmp_len, (uint8_t*)&p_core_init_rsp_params[36]);
                 if (status != NFCSTATUS_SUCCESS)
                 {
                     NXPLOG_NCIHAL_E("Sending last command for Recovery Failed");
@@ -3283,7 +3290,7 @@ static void phNxpNciHal_txNfccClockSetCmd(void)
     uint32_t pllSetRetryCount = 3, dpllSetRetryCount = 3;
     uint8_t pCmd4PllSetting[15] = {0x00, 0x00,};
     uint8_t pCmd4DpllSetting[15] = {0x00, 0x00,};
-    uint32_t pllCmdLen, dpllCmdLen;
+    uint32_t pllCmdLen = 0, dpllCmdLen = 0;
     int srcCfgFound, freqCfgFound;
 
     srcCfgFound = (GetNxpNumValue(NAME_NXP_SYS_CLK_SRC_SEL, &clockSource, sizeof(clockSource)) > 0);
@@ -3384,12 +3391,12 @@ static void phNxpNciHal_txNfccClockSetCmd(void)
     switch(clockSource)
     {
         case CLK_SRC_PLL:
-            while(status != NFCSTATUS_SUCCESS && pllSetRetryCount -- > 0)
+            while(status != NFCSTATUS_SUCCESS  && pllCmdLen && pllSetRetryCount -- > 0)
                 status = phNxpNciHal_send_ext_cmd(pllCmdLen, pCmd4PllSetting);
 
             status = NFCSTATUS_FAILED;
 
-            while(status != NFCSTATUS_SUCCESS && dpllSetRetryCount -- > 0)
+            while(status != NFCSTATUS_SUCCESS && dpllCmdLen && dpllSetRetryCount -- > 0)
                 status = phNxpNciHal_send_ext_cmd(dpllCmdLen, pCmd4DpllSetting);
 
             break;
@@ -3402,8 +3409,9 @@ static void phNxpNciHal_txNfccClockSetCmd(void)
             }
             break;
 
-        default:            NXPLOG_NCIHAL_E("Wrong clock source. Dont apply any modification");
-                            return;
+        default:
+            NXPLOG_NCIHAL_E("Wrong clock source. Dont apply any modification");
+            return;
     }
     phNxpNciClock.isClockSet = FALSE;
     if(status == NFCSTATUS_SUCCESS && phNxpNciClock.p_rx_data[3] == NFCSTATUS_SUCCESS)

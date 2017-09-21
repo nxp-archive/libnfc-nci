@@ -1333,10 +1333,6 @@ tNFA_STATUS NFA_SendNxpNciCommand (UINT8            cmd_params_len,
                                    UINT8            *p_cmd_params,
                                    tNFA_VSC_CBACK    *p_cback)
 {
-    if(cmd_params_len == 0x00 || p_cmd_params == NULL || p_cback == NULL)
-    {
-        return (NFA_STATUS_INVALID_PARAM);
-    }
     tNFA_DM_API_SEND_VSC *p_msg;
     UINT16  size = sizeof(tNFA_DM_API_SEND_VSC) + cmd_params_len;
 

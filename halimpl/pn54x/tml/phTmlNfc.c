@@ -376,7 +376,10 @@ static void phTmlNfc_TmlThread(void *pParam)
         /* If Tml write is requested */
         /* Set the variable to success initially */
         wStatus = NFCSTATUS_SUCCESS;
-        sem_wait(&gpphTmlNfc_Context->rxSemaphore);
+        if(sem_wait(&gpphTmlNfc_Context->rxSemaphore) != 0)
+        {
+            NXPLOG_TML_E("Failed to wait semaphore (errno=0x%08x)", errno);
+        }
 
         /* If Tml read is requested */
         if (1 == gpphTmlNfc_Context->tReadInfo.bEnable)
@@ -536,7 +539,10 @@ static void phTmlNfc_TmlWriterThread(void *pParam)
     while (gpphTmlNfc_Context->bThreadDone)
     {
         NXPLOG_TML_D("PN54X - Tml Writer Thread Running................\n");
-        sem_wait(&gpphTmlNfc_Context->txSemaphore);
+        if(sem_wait(&gpphTmlNfc_Context->txSemaphore) != 0)
+        {
+            NXPLOG_TML_E("Failed to wait semaphore (errno=0x%08x)", errno);
+        }
         /* If Tml write is requested */
         if (1 == gpphTmlNfc_Context->tWriteInfo.bEnable)
         {
@@ -1125,7 +1131,10 @@ void phTmlNfc_DeferredCall(uintptr_t dwThreadId, phLibNfc_Message_t *ptWorkerMsg
     intptr_t bPostStatus;
     UNUSED(dwThreadId);
     /* Post message on the user thread to invoke the callback function */
-    sem_wait(&gpphTmlNfc_Context->postMsgSemaphore);
+    if(sem_wait(&gpphTmlNfc_Context->postMsgSemaphore) != 0)
+    {
+        NXPLOG_TML_E("phTmlNfc_DeferredCall: semaphore error");
+    }
     bPostStatus = phDal4Nfc_msgsnd(gpphTmlNfc_Context->dwCallbackThreadId,
             ptWorkerMsg,
             0

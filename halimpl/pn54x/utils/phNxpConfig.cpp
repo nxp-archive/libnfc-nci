@@ -241,8 +241,14 @@ bool CNfcConfig::readConfig(const char* name, bool bResetContent)
         }
         return false;
     }
-    ALOGD("%s Opened %s config %s\n", __func__, (bResetContent ? "base" : "optional"), name);
-    stat(name, &buf);
+    else
+    {
+      ALOGD("%s Opened %s config %s\n", __func__, (bResetContent ? "base" : "optional"), name);
+    }
+    if(stat(name, &buf))
+    {
+        ALOGE("%s Unable get info of file %s\n", __func__, name);
+    }
     if(strcmp(default_nxp_config_path, name) == 0)
     {
         m_timeStamp = (unsigned long)buf.st_mtime;
@@ -827,7 +833,8 @@ int CNfcConfig::checkTimestamp(const char* fileName,const char* fileNameTime)
     FILE*   fd;
     struct stat st;
     unsigned long value = 0,timeStamp = 0;
-    int ret = 0;
+    int ret = 0, bytesToRead = 1;
+    size_t num = 0;
     if(strcmp(config_timestamp_path,fileNameTime) == 0 )
     {
         timeStamp=m_timeStamp;
@@ -861,13 +868,20 @@ int CNfcConfig::checkTimestamp(const char* fileName,const char* fileNameTime)
             ALOGE("%s Cannot open file %s\n", __func__, fileNameTime);
             return 1;
         }
-        fread(&value, sizeof(unsigned long), 1, fd);
-        ret = (value != timeStamp)?1:0;
-        if(ret)
+        num = fread(&value, sizeof(unsigned long), bytesToRead, fd);
+        if(num == bytesToRead)
         {
-            ALOGD("Config File Modified Update timestamp");
-            fseek(fd, 0, SEEK_SET);
-            fwrite(&timeStamp, sizeof(unsigned long), 1, fd);
+            ret = (value != timeStamp)?1:0;
+            if(ret)
+            {
+                ALOGD("Config File Modified Update timestamp");
+                fseek(fd, 0, SEEK_SET);
+                fwrite(&timeStamp, sizeof(unsigned long), 1, fd);
+            }
+        }
+        else
+        {
+            ALOGE("%s Failed to read timestamp", __func__);
         }
         fclose(fd);
     }
@@ -887,7 +901,8 @@ int CNfcConfig::updateTimestamp()
     FILE*   fd;
     struct stat st;
     unsigned long value = 0;
-    int ret = 0;
+    size_t num = 0;
+    int ret = 0, bytesToRead = 1;
 
     if(stat(config_timestamp_path, &st) != 0)
     {
@@ -908,12 +923,19 @@ int CNfcConfig::updateTimestamp()
             return 1;
         }
 
-        fread(&value, sizeof(unsigned long), 1, fd);
-        ret = (value != m_timeStamp);
-        if(ret)
+        num = fread(&value, sizeof(unsigned long), bytesToRead, fd);
+        if(num == bytesToRead)
         {
-            fseek(fd, 0, SEEK_SET);
-            fwrite(&m_timeStamp, sizeof(unsigned long), 1, fd);
+            ret = (value != m_timeStamp);
+            if(ret)
+            {
+                fseek(fd, 0, SEEK_SET);
+                fwrite(&m_timeStamp, sizeof(unsigned long), 1, fd);
+            }
+        }
+        else
+        {
+            ALOGE("%s Failed to read timestamp", __func__);
         }
         fclose(fd);
     }
