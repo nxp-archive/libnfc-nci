@@ -656,6 +656,22 @@ NFC_API extern void NFA_SetCEStrictDisable(UINT32 state);
 *******************************************************************************/
 NFC_API extern void NFA_setProvisionMode(BOOLEAN provisionMode);
 
+/******************************************************************************
+**
+** Function         NFA_SendPowerLinkCommand
+**
+** Description      This function is called to send an NCI Vendor Specific
+**                  command to NFCC.
+**
+**                  nfcee_id             - The NFCEE id.
+**                  cfg_value            - The config value
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+extern tNFA_STATUS NFA_SendPowerLinkCommand(UINT8 nfcee_id, UINT8 cfg_value);
+
 #endif
 
 #ifdef __cplusplus

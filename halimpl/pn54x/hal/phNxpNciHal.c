@@ -91,6 +91,9 @@ bool_t force_fw_download_req = FALSE;
 uint32_t wFwVerRsp;
 /* External global variable to get FW version */
 extern uint16_t wFwVer;
+/*global variable to store the data storage file names */
+char config_eseinfo_path[120];
+const char *bin_file_name = "/nfaStorage.bin1";
 
 extern uint16_t fw_maj_ver;
 extern uint16_t rom_version;
@@ -553,6 +556,12 @@ int phNxpNciHal_MinOpen(nfc_stack_callback_t *p_cback, nfc_stack_data_callback_t
         NXPLOG_NCIHAL_E ("Invalid nfc device node name keeping the default device node /dev/pn54x");
         strcpy (nfc_dev_node, "/dev/pn54x");
     }
+    if (!GetNxpStrValue(NAME_NFA_STORAGE, config_eseinfo_path,
+                   sizeof(config_eseinfo_path))) {
+        strlcpy(config_eseinfo_path, default_storage_location, sizeof(config_eseinfo_path));
+    }
+    strcat(config_eseinfo_path,bin_file_name);
+    NXPLOG_NCIHAL_D("NFA Storage bin location = %s", config_eseinfo_path);
 
     tTmlConfig.pDevName = (int8_t *)nfc_dev_node;
 
@@ -726,6 +735,12 @@ int phNxpNciHal_open(nfc_stack_callback_t *p_cback, nfc_stack_data_callback_t *p
         strcpy ((char *)nfc_dev_node, "/dev/pn54x");
     }
 
+    if (!GetNxpStrValue(NAME_NFA_STORAGE, config_eseinfo_path,
+                   sizeof(config_eseinfo_path))) {
+        strlcpy(config_eseinfo_path, default_storage_location, sizeof(config_eseinfo_path));
+    }
+    strcat(config_eseinfo_path,bin_file_name);
+    NXPLOG_NCIHAL_D("NFA Storage bin location = %s", config_eseinfo_path);
     /* Configure hardware link */
     nxpncihal_ctrl.gDrvCfg.nClientId = phDal4Nfc_msgget(0, 0600);
     nxpncihal_ctrl.gDrvCfg.nLinkType = ENUM_LINK_TYPE_I2C;/* For PN54X */
@@ -1213,7 +1228,6 @@ void read_retry()
 void phNxpNciHal_check_delete_nfaStorage_DHArea()
 {
     struct stat st;
-    const char config_eseinfo_path[] = "/data/nfc/nfaStorage.bin1";
     if (stat(config_eseinfo_path, &st) == -1)
     {
         ALOGD("%s file not present = %s", __FUNCTION__, config_eseinfo_path);
@@ -2237,13 +2251,14 @@ invoke_callback:
                     nxpncihal_ctrl.rx_data_len, nxpncihal_ctrl.p_rx_data);
         }
     }
-/* This code is moved to JNI
-#ifdef PN547C2_CLOCK_SETTING
     if (isNxpConfigModified())
     {
         updateNxpConfigTimestamp();
     }
-#endif*/
+    if (isNxpRFConfigModified())
+    {
+        updateNxpRFConfigTimestamp();
+    }
     return NFCSTATUS_SUCCESS;
 }
 /******************************************************************************
@@ -2260,7 +2275,6 @@ static NFCSTATUS phNxpNciHal_check_eSE_Session_Identity(void)
     struct stat st;
     int ret = 0;
     NFCSTATUS status = NFCSTATUS_FAILED;
-    const char config_eseinfo_path[] = "/data/nfc/nfaStorage.bin1";
     static uint8_t session_identity[8] = {0x00};
     uint8_t default_session[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
     uint8_t swp2_intf_status = 0x00;
@@ -3150,9 +3164,14 @@ int phNxpNciHal_ioctl(long arg, void *p_data)
         break;
 #endif
     case HAL_NFC_IOCTL_GET_CONFIG_INFO:
-        memcpy(p_data, mGetCfg_info , sizeof(phNxpNci_getCfg_info_t));
-        free(mGetCfg_info);
-        mGetCfg_info = NULL;
+        if (mGetCfg_info)
+        {
+            memcpy(p_data, mGetCfg_info , sizeof(phNxpNci_getCfg_info_t));
+        }
+        else
+        {
+            NXPLOG_NCIHAL_E("%s : Error! mgetCfg_info is Empty ", __func__);
+        }
         ret = 0;
         break;
     case HAL_NFC_IOCTL_CHECK_FLASH_REQ:
@@ -3834,7 +3853,6 @@ static void phNxpNciHal_check_factory_reset(void)
     struct stat st;
     int ret = 0;
     NFCSTATUS status = NFCSTATUS_FAILED;
-    const char config_eseinfo_path[] = "/data/nfc/nfaStorage.bin1";
 #if(NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH == TRUE || NXP_NFCC_DYNAMIC_DUAL_UICC == TRUE)
    static uint8_t reset_ese_session_identity_set[] = {
     0x20, 0x02, 0x22, 0x03, 0xA0, 0xEA, 0x08, 0xFF, 0xFF, 0xFF,

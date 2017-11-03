@@ -82,6 +82,7 @@ enum
     NFA_EE_NCI_MODE_SET_RSP_EVT,
 #if (NXP_EXTNS == TRUE)
     NFA_EE_NCI_MODE_SET_INFO,
+    NFA_EE_NCI_PWR_LNK_CTRL_SET_EVT,
 #if (NXP_WIRED_MODE_STANDBY == TRUE)
          NFA_EE_NCI_PWR_LNK_CTRL_RSP_EVT,
 #endif
@@ -431,6 +432,14 @@ typedef struct
     tNFC_NFCEE_MODE_SET_INFO    *p_data;
 }tNFA_EE_NCI_SET_MODE_INFO;
 /* data type for NFA_EE_NCI_MODE_SET_RSP_EVT */
+
+/* data type for NFA_EE_API_POWER_LINK_EVT */
+typedef struct {
+  NFC_HDR hdr;
+  uint8_t nfcee_id;
+  uint8_t cfg_value;
+} tNFA_EE_API_POWER_LINK_EVT;
+
 #if (NXP_WIRED_MODE_STANDBY == TRUE)
 typedef struct
 {
@@ -493,6 +502,7 @@ typedef union
     tNFA_EE_NCI_MODE_SET        mode_set_rsp;
 #if (NXP_EXTNS == TRUE)
     tNFA_EE_NCI_SET_MODE_INFO   mode_set_info;
+    tNFA_EE_API_POWER_LINK_EVT  pwr_lnk_ctrl_set;
 #if (NXP_WIRED_MODE_STANDBY == TRUE)
     tNFA_EE_NCI_PWR_LNK_CTRL    pwr_lnk_ctrl_rsp;
 #endif
@@ -615,6 +625,7 @@ UINT8 NFA_check_p61_CL_Activated();
 UINT16 nfa_ee_find_max_aid_config_length();
 UINT16 nfa_ee_api_get_max_aid_config_length();
 extern UINT8 nfa_ee_connectionClosed();
+void nfa_ee_api_power_link_set(tNFA_EE_MSG* p_data);
 #endif
 UINT8 nfa_ee_ecb_to_mask (tNFA_EE_ECB *p_cb);
 void nfa_ee_restore_one_ecb (tNFA_EE_ECB *p_cb);
