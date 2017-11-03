@@ -57,7 +57,9 @@
 #include "rw_int.h"
 #include "ce_int.h"
 #include "nfa_sys.h"
-
+#if(NXP_EXTNS == TRUE)
+#include "nfa_dm_int.h"
+#endif
 
 #if (NFC_RW_ONLY == FALSE)
 #include "ce_api.h"
@@ -850,6 +852,10 @@ void NFC_Disable (void)
     NFC_TRACE_API1 ("NFC_Disable (): nfc_state = %d", nfc_cb.nfc_state);
 #if(NXP_EXTNS == TRUE)
     UINT16 boot_mode = NFC_NORMAL_BOOT_MODE;
+
+#if (NXP_ESE_DUAL_MODE_PRIO_SCHEME == NXP_ESE_WIRED_MODE_RESUME)
+    nfc_stop_timer(&nfc_cb.rf_filed_event_timeout_timer);
+#endif
 #endif
     if ((nfc_cb.nfc_state == NFC_STATE_NONE) || (nfc_cb.nfc_state == NFC_STATE_NFCC_POWER_OFF_SLEEP))
     {
@@ -1419,6 +1425,9 @@ tNFC_STATUS NFC_Deactivate (tNFC_DEACT_TYPE deactivate_type)
         GKI_freebuf (nfc_cb.p_disc_pending);
 #endif
         nfc_cb.p_disc_pending = NULL;
+#if (NXP_EXTNS == TRUE)
+        nfa_dm_cb.disc_cb.disc_flags &= ~NFA_DM_DISC_FLAGS_W4_RSP;
+#endif
         return NFC_STATUS_OK;
     }
 

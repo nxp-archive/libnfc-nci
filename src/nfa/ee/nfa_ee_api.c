@@ -239,6 +239,40 @@ void NFA_setProvisionMode(BOOLEAN provisionMode)
     NFA_TRACE_API1 ("NFA_setProvisionMode(), provisionMode:%d", provisionMode);
     gNfaProvisionMode = provisionMode;
 }
+
+
+/******************************************************************************
+**
+** Function         NFA_SendPowerLinkCommand
+**
+** Description      This function is called to send an NCI Vendor Specific
+**                  command to NFCC.
+**
+**                  nfcee_id             - The NFCEE id.
+**                  cfg_value            - The config value
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+tNFA_STATUS NFA_SendPowerLinkCommand(UINT8 nfcee_id, UINT8 cfg_value)
+{
+  tNFA_EE_API_POWER_LINK_EVT* p_msg;
+
+  NFA_TRACE_API1("NFA_SendPowerLinkCommand() nfcee_id=0x%x", nfcee_id);
+
+  if ((p_msg = (tNFA_EE_API_POWER_LINK_EVT*)GKI_getbuf(sizeof(tNFA_EE_API_POWER_LINK_EVT))) != NULL) {
+    p_msg->hdr.event = NFA_EE_NCI_PWR_LNK_CTRL_SET_EVT;
+    p_msg->nfcee_id= nfcee_id;
+    p_msg->cfg_value = cfg_value;
+
+    nfa_sys_sendmsg(p_msg);
+
+    return (NFA_STATUS_OK);
+  }
+
+  return (NFA_STATUS_FAILED);
+}
 #endif
 
 /*******************************************************************************
