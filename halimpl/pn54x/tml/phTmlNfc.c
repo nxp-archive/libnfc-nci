@@ -1035,6 +1035,7 @@ NFCSTATUS phTmlNfc_IoCtl(phTmlNfc_ControlCode_t eControlCode)
                     break;
                 }
 #if(NFC_NXP_ESE == TRUE)
+#if(ESE_SPI_FEATURE == TRUE)
            case phTmlNfc_e_SetJcopDwnldEnable:
            {
                wStatus = phTmlNfc_i2c_set_Jcop_dwnld_state(gpphTmlNfc_Context->pDevHandle, JCP_DWNLD_START);
@@ -1101,6 +1102,7 @@ NFCSTATUS phTmlNfc_IoCtl(phTmlNfc_ControlCode_t eControlCode)
                 break;
             }
 
+#endif
 #endif
             default:
                 {

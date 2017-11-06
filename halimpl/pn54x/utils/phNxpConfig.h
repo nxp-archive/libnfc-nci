@@ -53,6 +53,7 @@ void resetNxpConfig(void);
 int isNxpRFConfigModified();
 int isNxpConfigModified();
 int updateNxpConfigTimestamp();
+int updateNxpRFConfigTimestamp();
 
 #ifdef __cplusplus
 };
@@ -116,5 +117,6 @@ int updateNxpConfigTimestamp();
 #endif
 /* default configuration */
 #define default_storage_location "/data/nfc"
+#define NAME_NFA_STORAGE "NFA_STORAGE"
 
 #endif

@@ -72,6 +72,7 @@ const char tr_config_timestamp_path[] = "/data/nfc/libnfc-nxpTransitConfigState.
 const char config_timestamp_path[] = "/data/nfc/libnfc-nxpConfigState.bin";
 const char default_nxp_config_path[] = "/etc/libnfc-nxp.conf";
 const char nxp_rf_config_path[] = "/system/vendor/libnfc-nxp_RF.conf";
+const char default_common_config_path[] = "/etc/libnfc-brcm.conf";
 
 using namespace::std;
 
@@ -101,6 +102,7 @@ public:
     static CNfcConfig& GetInstance();
     friend void readOptionalConfig(const char* optional);
     int updateTimestamp();
+    int updateTimestamp(const char* fileName);
     int checkTimestamp(const char* fileName,const char* fileTimeStamp);
 
     bool    getValue(const char* name, char* pValue, size_t len) const;
@@ -511,6 +513,7 @@ CNfcConfig& CNfcConfig::GetInstance()
         readOptionalConfig("brcm");
         theInstance.readNxpTransitConfig(transit_config_path);
         theInstance.readNxpRFConfig(nxp_rf_config_path);
+        theInstance.readConfig(default_common_config_path, false);
 #endif
     }
     return theInstance;
@@ -833,8 +836,8 @@ int CNfcConfig::checkTimestamp(const char* fileName,const char* fileNameTime)
     FILE*   fd;
     struct stat st;
     unsigned long value = 0,timeStamp = 0;
-    int ret = 0, bytesToRead = 1;
-    size_t num = 0;
+    int ret = 0;
+    size_t num = 0, bytesToRead = 1;
     if(strcmp(config_timestamp_path,fileNameTime) == 0 )
     {
         timeStamp=m_timeStamp;
@@ -872,12 +875,6 @@ int CNfcConfig::checkTimestamp(const char* fileName,const char* fileNameTime)
         if(num == bytesToRead)
         {
             ret = (value != timeStamp)?1:0;
-            if(ret)
-            {
-                ALOGD("Config File Modified Update timestamp");
-                fseek(fd, 0, SEEK_SET);
-                fwrite(&timeStamp, sizeof(unsigned long), 1, fd);
-            }
         }
         else
         {
@@ -901,8 +898,8 @@ int CNfcConfig::updateTimestamp()
     FILE*   fd;
     struct stat st;
     unsigned long value = 0;
-    size_t num = 0;
-    int ret = 0, bytesToRead = 1;
+    size_t num = 0, bytesToRead = 1;
+    int ret = 0;
 
     if(stat(config_timestamp_path, &st) != 0)
     {
@@ -931,6 +928,76 @@ int CNfcConfig::updateTimestamp()
             {
                 fseek(fd, 0, SEEK_SET);
                 fwrite(&m_timeStamp, sizeof(unsigned long), 1, fd);
+            }
+        }
+        else
+        {
+            ALOGE("%s Failed to read timestamp", __func__);
+        }
+        fclose(fd);
+    }
+    return ret;
+}
+
+/*******************************************************************************
+**
+** Function:    CNfcConfig::updateTimestamp(const char* fileName)
+**
+** Description: update time stamp if config file has modified
+**
+** Returns:     0 if not modified, 1 otherwise.
+**
+*******************************************************************************/
+int CNfcConfig::updateTimestamp(const char* fileNameTime)
+{
+    FILE*   fd;
+    struct stat st;
+    unsigned long value = 0, timeStamp = 0;
+    size_t num = 0, bytesToRead = 1;
+    int ret = 0;
+
+    if(strcmp(config_timestamp_path,fileNameTime) == 0 )
+    {
+        timeStamp=m_timeStamp;
+    }
+    else if(strcmp(rf_config_timestamp_path,fileNameTime) == 0)
+    {
+        timeStamp=m_timeStampRF;
+    }
+    else if(strcmp(tr_config_timestamp_path,fileNameTime) == 0)
+    {
+        timeStamp=m_timeStampTransit;
+    }
+    else
+        ALOGD("Invalid file \n");
+
+    if(stat(fileNameTime, &st) != 0)
+    {
+        ALOGD("%s file %s not exist, creat it.\n", __func__, fileNameTime);
+        if ((fd = fopen(fileNameTime, "w+")) != NULL)
+        {
+            fwrite(&timeStamp, sizeof(unsigned long), 1, fd);
+            fclose(fd);
+        }
+        return 1;
+    }
+    else
+    {
+        fd = fopen(fileNameTime, "r+");
+        if(fd == NULL)
+        {
+            ALOGE("%s Cannot open file %s\n", __func__, fileNameTime);
+            return 1;
+        }
+
+        num = fread(&value, sizeof(unsigned long), bytesToRead, fd);
+        if(num == bytesToRead)
+        {
+            ret = (value != timeStamp);
+            if(ret)
+            {
+                fseek(fd, 0, SEEK_SET);
+                fwrite(&timeStamp, sizeof(unsigned long), 1, fd);
             }
         }
         else
@@ -1173,4 +1240,22 @@ extern "C" int updateNxpConfigTimestamp()
 {
     nxp::CNfcConfig& rConfig = nxp::CNfcConfig::GetInstance();
     return rConfig.updateTimestamp();
+}
+
+/*******************************************************************************
+**
+** Function:    updateNxpRFConfigTimestamp()
+**
+** Description: update if config file has modified
+**
+** Returns:     0 if not modified, 1 otherwise.
+**
+*******************************************************************************/
+extern "C" int updateNxpRFConfigTimestamp()
+{
+    int retRF = 0, retTransit = 0;
+    nxp::CNfcConfig& rConfig = nxp::CNfcConfig::GetInstance();
+    retRF = rConfig.updateTimestamp(rf_config_timestamp_path);
+    retTransit = rConfig.updateTimestamp(tr_config_timestamp_path);
+    return (retRF | retTransit);
 }
