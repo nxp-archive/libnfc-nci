@@ -65,6 +65,7 @@
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          FALSE
     #define NXP_ESE_FORCE_ENABLE                  TRUE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     FALSE
+    #define NXP_ESE_TRANSIT_ENABLE                FALSE
 #elif(NFC_NXP_CHIP_TYPE == PN553)
     #define NFC_NXP_TRIPLE_MODE_PROTECTION        FALSE
     #define NXP_ESE_FELICA_CLT                    FALSE
@@ -90,6 +91,7 @@
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          TRUE
     #define NXP_ESE_FORCE_ENABLE                  FALSE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     TRUE
+    #define NXP_ESE_TRANSIT_ENABLE                FALSE
 #endif
 
 #else /*Else of #if(NFC_NXP_ESE == TRUE)*/

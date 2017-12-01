@@ -489,6 +489,9 @@ typedef UINT8 tNCI_DISCOVERY_TYPE;
 #define NCI_RF_PARAM_SIZE_T3T_POLLING   0x04        /* System Code, RC, TSN */
 #if(NXP_EXTNS == TRUE)
 #define NCI_MSG_RF_WTX                  0x17
+#define NCI_BLOCK_ROUTE_AID             0x01
+#define NCI_BLOCK_ROUTE_ISO7816         0x02
+#define NCI_BLOCK_ROUTE_ISODEP          0x04
 #endif
 
 /**********************************************
