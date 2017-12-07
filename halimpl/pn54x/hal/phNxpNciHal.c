@@ -3305,8 +3305,9 @@ static void phNxpNciHal_txNfccClockSetCmd(void)
 
 #if(NFC_NXP_CHIP_TYPE == PN553)
     static uint8_t set_clock_cmd[] = {0x20, 0x02, 0x05, 0x01, 0xA0, 0x03, 0x01, 0x08};
+    uint8_t setClkCmdLen = sizeof(set_clock_cmd);
     unsigned long  clockSource, frequency;
-    uint32_t pllSetRetryCount = 3, dpllSetRetryCount = 3;
+    uint32_t pllSetRetryCount = 3, dpllSetRetryCount = 3, retryCnt = 0;
     uint8_t pCmd4PllSetting[15] = {0x00, 0x00,};
     uint8_t pCmd4DpllSetting[15] = {0x00, 0x00,};
     uint32_t pllCmdLen = 0, dpllCmdLen = 0;
@@ -3410,6 +3411,12 @@ static void phNxpNciHal_txNfccClockSetCmd(void)
     switch(clockSource)
     {
         case CLK_SRC_PLL:
+            set_clock_cmd[setClkCmdLen -1] = 0x00;
+            while(status != NFCSTATUS_SUCCESS && retryCnt++ < MAX_RETRY_COUNT)
+                status = phNxpNciHal_send_ext_cmd(setClkCmdLen, set_clock_cmd);
+
+            status = NFCSTATUS_FAILED;
+
             while(status != NFCSTATUS_SUCCESS  && pllCmdLen && pllSetRetryCount -- > 0)
                 status = phNxpNciHal_send_ext_cmd(pllCmdLen, pCmd4PllSetting);
 
@@ -3421,7 +3428,7 @@ static void phNxpNciHal_txNfccClockSetCmd(void)
             break;
 
         case CLK_SRC_XTAL:
-            status = phNxpNciHal_send_ext_cmd(sizeof(set_clock_cmd), set_clock_cmd);
+            status = phNxpNciHal_send_ext_cmd(setClkCmdLen, set_clock_cmd);
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E("XTAL clock setting failed !!");

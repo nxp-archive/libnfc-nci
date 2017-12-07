@@ -31,7 +31,7 @@
 #define NXP_NFCC_DYNAMIC_DUAL_UICC              FALSE
 #define NXP_NFCC_FW_WA                          TRUE
 #define NXP_NFCC_FORCE_NCI1_0_INIT              FALSE
-#define NXP_NFCC_ROUTING_BLOCK_BIT              FALSE
+#define NXP_NFCC_ROUTING_BLOCK_BIT              TRUE
 #define NFC_NXP_STAT_DUAL_UICC_EXT_SWITCH       FALSE
 #define NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH    FALSE
 #define NXP_NFCC_SPI_FW_DOWNLOAD_SYNC           FALSE

@@ -162,6 +162,7 @@ int GetNumValue(const char* name, void* p_value, unsigned long len);
 #define NAME_NXP_ESE_POWER_DH_CONTROL                 "NXP_ESE_POWER_DH_CONTROL"
 #endif
 #define NAME_NXP_EMVCO_POLL_PROFILE                   "NXP_EMVCO_POLL_PROFILE"
+#define NAME_NXP_NFC_AID_TABLE                        "NXP_NFC_AID_TABLE"
 #endif
 
 #define                     LPTD_PARAM_LEN (40)

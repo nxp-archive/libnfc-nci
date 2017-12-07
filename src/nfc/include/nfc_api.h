@@ -93,7 +93,7 @@
 #define NXP_EN_PN553                    1
 #define NXP_EN_PN80T                    1
 #define NXP_KOS_VER                     (2U) /* NXP android version */
-#define NFC_NXP_MW_VERSION_MAJ          (7U) /* MW Major Version */
+#define NFC_NXP_MW_VERSION_MAJ          (8U) /* MW Major Version */
 #define NFC_NXP_MW_VERSION_MIN          (0U) /* MW Minor Version */
 #endif
 /* 0xE0 ~0xFF are proprietary status codes */
@@ -216,6 +216,12 @@ typedef UINT8 tNFC_STATUS;
 #define NFC_ROUTE_TAG_PROTO          NCI_ROUTE_TAG_PROTO     /* Protocol based routing  */
 #define NFC_ROUTE_TAG_AID            NCI_ROUTE_TAG_AID       /* AID routing */
 #define NFC_ROUTE_TLV_ENTRY_SIZE     4 /* tag, len, 2 byte value for technology/protocol based routing */
+
+#if (NXP_EXTNS == TRUE)
+#define NFC_BLOCK_ROUTE_AID          NCI_BLOCK_ROUTE_AID         /* Block AID routing */
+#define NFC_BLOCK_ROUTE_ISO7816      NCI_BLOCK_ROUTE_ISO7816     /* Block ISO7816 Protocol based routing  */
+#define NFC_BLOCK_ROUTE_ISODEP       NCI_BLOCK_ROUTE_ISODEP      /* Block ISODEP Protocol based routing  */
+#endif
 
 /* For routing */
 #define NFC_DH_ID                NCI_DH_ID   /* for DH */
