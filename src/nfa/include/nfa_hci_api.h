@@ -684,6 +684,7 @@ NFC_API extern void NFA_HciDebug (UINT8 action, UINT8 size, UINT8 *p_data);
 #if (NXP_EXTNS == TRUE)
 NFC_API extern tNFA_STATUS NFA_HciSendHostTypeListCommand (tNFA_HANDLE hci_handle);
 NFC_API extern tNFA_STATUS NFA_HciConfigureNfceeETSI12 ();
+NFC_API extern BOOLEAN NFA_IsPipeStatusNotCorrect();
 #endif
 #if(NXP_EXTNS == TRUE)
 /*******************************************************************************

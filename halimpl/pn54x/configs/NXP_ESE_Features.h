@@ -91,7 +91,7 @@
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          TRUE
     #define NXP_ESE_FORCE_ENABLE                  FALSE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     TRUE
-    #define NXP_ESE_TRANSIT_ENABLE                FALSE
+    #define NXP_ESE_TRANSIT_ENABLE                TRUE
 #endif
 
 #else /*Else of #if(NFC_NXP_ESE == TRUE)*/

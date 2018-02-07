@@ -1130,4 +1130,13 @@ tNFA_STATUS NFA_HciConfigureNfceeETSI12()
 
     return (NFA_STATUS_FAILED);
 }
+
+BOOLEAN NFA_IsPipeStatusNotCorrect()
+{
+  NFA_TRACE_API1("NFA_IsPipeStatusNotCorrect (): pipe status not correct: %d", nfa_hci_cb.IsApduPipeStatusNotCorrect);
+  BOOLEAN status;
+  status = nfa_hci_cb.IsApduPipeStatusNotCorrect;
+  nfa_hci_cb.IsApduPipeStatusNotCorrect = FALSE;
+  return status;
+}
 #endif

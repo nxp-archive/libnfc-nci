@@ -37,6 +37,23 @@
 #endif
 #endif
 
+const char RF_BLOCK_LIST[6][18] =
+{
+    NAME_NXP_RF_CONF_BLK_1,
+    NAME_NXP_RF_CONF_BLK_2,
+    NAME_NXP_RF_CONF_BLK_3,
+    NAME_NXP_RF_CONF_BLK_4,
+    NAME_NXP_RF_CONF_BLK_5,
+    NAME_NXP_RF_CONF_BLK_6
+};
+
+const char TVDD_CONFIG_LIST[3][19] =
+{
+    NAME_NXP_EXT_TVDD_CFG_1,
+    NAME_NXP_EXT_TVDD_CFG_2,
+    NAME_NXP_EXT_TVDD_CFG_3
+};
+
 /* FW Mobile major number */
 #define FW_MOBILE_MAJOR_NUMBER_PN553 0x10
 #define FW_MOBILE_MAJOR_NUMBER_PN551 0x05
@@ -606,6 +623,7 @@ int phNxpNciHal_MinOpen(nfc_stack_callback_t *p_cback, nfc_stack_data_callback_t
                 }while(init_retry_cnt < 0x03);
             }
         }
+        pthread_attr_destroy(&attr);
     }
     CONCURRENCY_UNLOCK();
     init_retry_cnt = 0;
@@ -906,14 +924,14 @@ int phNxpNciHal_write(uint16_t data_len, const uint8_t *p_data)
 
     CONCURRENCY_LOCK();
 
-    /* Create local copy of cmd_data */
-    memcpy(nxpncihal_ctrl.p_cmd_data, p_data, data_len);
     nxpncihal_ctrl.cmd_len = data_len;
     if(nxpncihal_ctrl.cmd_len > NCI_MAX_DATA_LEN)
     {
         NXPLOG_NCIHAL_D ("cmd_len exceeds limit NCI_MAX_DATA_LEN");
         goto clean_and_return;
     }
+    /* Create local copy of cmd_data */
+    memcpy(nxpncihal_ctrl.p_cmd_data, p_data, data_len);
 #ifdef P2P_PRIO_LOGIC_HAL_IMP
     /* Specific logic to block RF disable when P2P priority logic is busy */
     if (p_data[0] == 0x21&&
@@ -1461,6 +1479,8 @@ retry_core_init:
 
 #if((NXP_EXTNS == TRUE) && (NXP_ESE_POWER_MODE==TRUE))
     {
+      if(isNxpConfigModified() || (fw_dwnld_flag == 0x01))
+      {
         uint8_t value;
         retlen = 0;
         if(GetNxpNumValue(NAME_NXP_ESE_POWER_DH_CONTROL, (void *)&retlen, sizeof(retlen)))
@@ -1474,8 +1494,6 @@ retry_core_init:
                 mEEPROM_info.bufflen = sizeof(value);
                 mEEPROM_info.request_type = EEPROM_ESE_SVDD_POWER;
                 mEEPROM_info.request_mode = SET_EEPROM_DATA;
-
-                if(isNxpConfigModified() || (fw_dwnld_flag == 0x01))
                 status = request_EEPROM(&mEEPROM_info);
             }
             if(retlen == 0x01)
@@ -1487,8 +1505,6 @@ retry_core_init:
                 mEEPROM_info.request_type = EEPROM_ESE_POWER_EXT_PMU;
                 mEEPROM_info.request_mode = SET_EEPROM_DATA;
                 phTmlNfc_IoCtl(phTmlNfc_e_SetLegacyPowerScheme);
-
-                if(isNxpConfigModified() || (fw_dwnld_flag == 0x01))
                 status = request_EEPROM(&mEEPROM_info);
             }
             else if(retlen == 0x02)
@@ -1513,12 +1529,12 @@ retry_core_init:
                         mEEPROM_info.bufflen = sizeof(value);
                         mEEPROM_info.request_type = EEPROM_ESE_POWER_EXT_PMU;
                         mEEPROM_info.request_mode = SET_EEPROM_DATA;
-                        if(isNxpConfigModified() || (fw_dwnld_flag == 0x01))
                         status = request_EEPROM(&mEEPROM_info);
                     }
                 }
             }
         }
+      }
     }
 #endif
     setConfigAlways = FALSE;
@@ -1534,7 +1550,7 @@ retry_core_init:
         phNxpNciHal_check_delete_nfaStorage_DHArea();
     }
 
-    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpRFConfigModified() || isNxpConfigModified())
+    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpConfigModified())
     {
         config_access = TRUE;
         retlen = 0;
@@ -1588,201 +1604,59 @@ retry_core_init:
         NXPLOG_NCIHAL_D ("Performing TVDD Settings");
     /*TVDD settings commented for PN553 bringup FW  */
         isfound = GetNxpNumValue(NAME_NXP_EXT_TVDD_CFG, &num, sizeof(num));
-        if (isfound > 0) {
-            if(num == 1) {
-                isfound = GetNxpByteArrayValue(NAME_NXP_EXT_TVDD_CFG_1, (char *) buffer,
-                        bufflen, &retlen);
-                if (retlen > 0) {
-                    status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-                    if (status != NFCSTATUS_SUCCESS) {
-                        NXPLOG_NCIHAL_E("EXT TVDD CFG 1 Settings failed");
-                        NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                    }
-                }
+        if (isfound > 0 && (num > 0 && num <= 3)) {
+          isfound = GetNxpByteArrayValue(TVDD_CONFIG_LIST[num - 1],
+              (char*) buffer, bufflen, &retlen);
+          if (retlen > 0) {
+            status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+            if (status != NFCSTATUS_SUCCESS) {
+              NXPLOG_NCIHAL_E("EXT TVDD CFG 1 Settings failed");
+              NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
             }
-            else if(num == 2) {
-                isfound = GetNxpByteArrayValue(NAME_NXP_EXT_TVDD_CFG_2, (char *) buffer,
-                        bufflen, &retlen);
-                    if (retlen > 0) {
-                    status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-                    if (status != NFCSTATUS_SUCCESS) {
-                        NXPLOG_NCIHAL_E("EXT TVDD CFG 2 Settings failed");
-                        NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                    }
-                }
-            }
-            else if(num == 3) {
-                isfound = GetNxpByteArrayValue(NAME_NXP_EXT_TVDD_CFG_3, (char *) buffer,
-                        bufflen, &retlen);
-                    if (retlen > 0) {
-                    status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-                    if (status != NFCSTATUS_SUCCESS) {
-                        NXPLOG_NCIHAL_E("EXT TVDD CFG 3 Settings failed");
-                        NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                    }
-                }
-            }
-            else {
-                NXPLOG_NCIHAL_E("Wrong Configuration Value %ld", num);
-            }
-
+          }
+        } else {
+          NXPLOG_NCIHAL_E("Wrong Configuration Value %ld", num);
         }
 #endif
+    }
 
     retlen = 0;
-
+    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpRFConfigModified())
+    {
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
         config_access = FALSE;
 #endif
-        NXPLOG_NCIHAL_D ("Performing RF Settings BLK 1");
-        isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_1, (char *) buffer,
-                bufflen, &retlen);
-        if (retlen > 0) {
+        uint8_t numOfBlocks = sizeof(RF_BLOCK_LIST)/sizeof(RF_BLOCK_LIST[0]);
+        uint8_t i = 0;
+        for(i=0; i< numOfBlocks; i++)
+        {
+          retlen = 0;
+          NXPLOG_NCIHAL_D("Performing RF Settings BLK %u", i+1);
+          isfound = GetNxpByteArrayValue(RF_BLOCK_LIST[i], (char*)buffer,
+                                         bufflen, &retlen);
+          if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
-            if(status == NFCSTATUS_SUCCESS)
-            {
+            if (status == NFCSTATUS_SUCCESS) {
                 status = phNxpNciHal_CheckRFCmdRespStatus();
                 /*STATUS INVALID PARAM 0x09*/
-                if(status == 0x09)
-                {
+                if (status == 0x09) {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+                    //NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+                    break;
                 }
-            }
-            else
+            } else
 #endif
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("RF Settings BLK 1 failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+              if (status != NFCSTATUS_SUCCESS) {
+                NXPLOG_NCIHAL_E("RF Settings BLK %u failed", i+1);
+                //NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+                break;
             }
+          }
         }
-        retlen = 0;
+        if(status != NFCSTATUS_SUCCESS)
+          NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
 
-        NXPLOG_NCIHAL_D ("Performing RF Settings BLK 2");
-        isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_2, (char *) buffer,
-                bufflen, &retlen);
-        if (retlen > 0) {
-            status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            if(status == NFCSTATUS_SUCCESS)
-            {
-                status = phNxpNciHal_CheckRFCmdRespStatus();
-                /*STATUS INVALID PARAM 0x09*/
-                if(status == 0x09)
-                {
-                    phNxpNciHalRFConfigCmdRecSequence();
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-
-                }
-            }
-            else
-#endif
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("RF Settings BLK 2 failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-            }
-        }
-        retlen = 0;
-
-        NXPLOG_NCIHAL_D ("Performing RF Settings BLK 3");
-        isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_3, (char *) buffer,
-                bufflen, &retlen);
-        if (retlen > 0) {
-            status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            if(status == NFCSTATUS_SUCCESS)
-            {
-                status = phNxpNciHal_CheckRFCmdRespStatus();
-                /*STATUS INVALID PARAM 0x09*/
-                if(status == 0x09)
-                {
-                    phNxpNciHalRFConfigCmdRecSequence();
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                }
-            }
-            else
-#endif
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("RF Settings BLK 3 failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-            }
-        }
-        retlen = 0;
-
-        NXPLOG_NCIHAL_D ("Performing RF Settings BLK 4");
-        isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_4, (char *) buffer,
-                bufflen, &retlen);
-        if (retlen > 0) {
-            status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            if(status == NFCSTATUS_SUCCESS)
-            {
-                status = phNxpNciHal_CheckRFCmdRespStatus();
-                /*STATUS INVALID PARAM 0x09*/
-                if(status == 0x09)
-                {
-                    phNxpNciHalRFConfigCmdRecSequence();
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                }
-            }
-            else
-#endif
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("RF Settings BLK 4 failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-            }
-        }
-        retlen = 0;
-
-        NXPLOG_NCIHAL_D ("Performing RF Settings BLK 5");
-        isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_5, (char *) buffer,
-                bufflen, &retlen);
-        if (retlen > 0) {
-            status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            if(status == NFCSTATUS_SUCCESS)
-            {
-                status = phNxpNciHal_CheckRFCmdRespStatus();
-                /*STATUS INVALID PARAM 0x09*/
-                if(status == 0x09)
-                {
-                    phNxpNciHalRFConfigCmdRecSequence();
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                }
-            }
-            else
-#endif
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("RF Settings BLK 5 failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-            }
-        }
-        retlen = 0;
-
-        NXPLOG_NCIHAL_D ("Performing RF Settings BLK 6");
-        isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_6, (char *) buffer,
-                bufflen, &retlen);
-        if (retlen > 0) {
-            status = phNxpNciHal_send_ext_cmd(retlen, buffer);
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            if(status == NFCSTATUS_SUCCESS)
-            {
-                status = phNxpNciHal_CheckRFCmdRespStatus();
-                /*STATUS INVALID PARAM 0x09*/
-                if(status == 0x09)
-                {
-                    phNxpNciHalRFConfigCmdRecSequence();
-                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-                }
-            }
-            else
-#endif
-            if (status != NFCSTATUS_SUCCESS) {
-                NXPLOG_NCIHAL_E("RF Settings BLK 6 failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-            }
-        }
         retlen = 0;
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
         config_access = TRUE;
@@ -1799,6 +1673,23 @@ retry_core_init:
             }
         }
 
+        NXPLOG_NCIHAL_D ("Performing NAME_NXP_CORE_CONF Settings");
+        retlen = 0;
+        isfound =  GetNxpByteArrayValue(NAME_NXP_CORE_CONF,(char *)buffer,bufflen,&retlen);
+        if(retlen > 0)
+        {
+            /* NXP ACT Proprietary Ext */
+            status = phNxpNciHal_send_ext_cmd(retlen,buffer);
+            if (status != NFCSTATUS_SUCCESS)
+            {
+                NXPLOG_NCIHAL_E("Core Set Config failed");
+                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+            }
+        }
+    }
+
+    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpConfigModified())
+    {
 #if(NFC_NXP_ESE_ETSI12_PROP_INIT == TRUE)
         uint8_t swp_info_buff[2];
         uint8_t swp_intf_status = 0x00;
@@ -1839,20 +1730,6 @@ retry_core_init:
 #endif
         NXPLOG_NCIHAL_D ("Setting value %d %d",swp_info_buff[1],swp_info_buff[0]);
 #endif //END_OF_NFC_NXP_ESE_ETSI12_PROP_INIT
-
-        NXPLOG_NCIHAL_D ("Performing NAME_NXP_CORE_CONF Settings");
-        retlen = 0;
-        isfound =  GetNxpByteArrayValue(NAME_NXP_CORE_CONF,(char *)buffer,bufflen,&retlen);
-        if(retlen > 0)
-        {
-            /* NXP ACT Proprietary Ext */
-            status = phNxpNciHal_send_ext_cmd(retlen,buffer);
-            if (status != NFCSTATUS_SUCCESS)
-            {
-                NXPLOG_NCIHAL_E("Core Set Config failed");
-                NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-            }
-        }
 
         retlen = 0;
         isfound = GetNxpByteArrayValue(NAME_NXP_CORE_MFCKEY_SETTING,
@@ -2017,21 +1894,18 @@ retry_core_init:
             }
         }
 #endif
-        NXPLOG_NCIHAL_E("Resetting FW Dnld flag");
-        fw_dwnld_flag = 0x00;
-        mEEPROM_info.buffer = &fw_dwnld_flag;
-        mEEPROM_info.bufflen = sizeof(fw_dwnld_flag);
-        mEEPROM_info.request_type = EEPROM_FW_DWNLD;
-        mEEPROM_info.request_mode = SET_EEPROM_DATA;
-        status = request_EEPROM(&mEEPROM_info);
-        if(status == NFCSTATUS_SUCCESS)
-        {
-            NXPLOG_NCIHAL_E("Resetting FW Dnld flag SUCCESS");
-        }
-        else
-        {
-            NXPLOG_NCIHAL_E("Resetting FW Dnld flag FAILED");
-        }
+    }
+    NXPLOG_NCIHAL_E("Resetting FW Dnld flag");
+    fw_dwnld_flag = 0x00;
+    mEEPROM_info.buffer = &fw_dwnld_flag;
+    mEEPROM_info.bufflen = sizeof(fw_dwnld_flag);
+    mEEPROM_info.request_type = EEPROM_FW_DWNLD;
+    mEEPROM_info.request_mode = SET_EEPROM_DATA;
+    status = request_EEPROM(&mEEPROM_info);
+    if (status == NFCSTATUS_SUCCESS) {
+        NXPLOG_NCIHAL_E("Resetting FW Dnld flag SUCCESS");
+    } else {
+        NXPLOG_NCIHAL_E("Resetting FW Dnld flag FAILED");
     }
 
     config_access = FALSE;
