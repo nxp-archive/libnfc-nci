@@ -383,6 +383,7 @@ NFC_API extern void nfc_ncif_proc_get_config_rsp (BT_HDR *p_msg);
 NFC_API extern void nfc_ncif_proc_data (BT_HDR *p_msg);
 #if(NXP_EXTNS == TRUE)
 NFC_API extern UINT8 nfc_ncif_retransmit_data (tNFC_CONN_CB *p_cb, BT_HDR *p_data);
+NFC_API extern UINT8 nfc_hal_nfcc_get_reset_info (void);
 NFC_API extern tNFC_STATUS nfc_ncif_store_FWVersion(UINT8 * p_buf);
 #if((NFC_NXP_CHIP_TYPE != PN547C2) && (NFC_NXP_AID_MAX_SIZE_DYN == TRUE))
 NFC_API extern tNFC_STATUS nfc_ncif_set_MaxRoutingTableSize(UINT8 * p_buf);

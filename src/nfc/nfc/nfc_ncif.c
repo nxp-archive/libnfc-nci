@@ -406,6 +406,44 @@ UINT8 nfc_ncif_retransmit_data (tNFC_CONN_CB *p_cb, BT_HDR *p_data)
     }
     return NCI_STATUS_OK;
 }
+
+/*******************************************************************************
+**
+** Function         nfc_hal_nfcc_get_reset_info
+**
+** Description      Retrieves the more info about core_reset_ntf
+**
+** Returns          SUCCESS or FAILED
+**
+*******************************************************************************/
+UINT8 nfc_hal_nfcc_get_reset_info(void) {
+  nfc_nci_ExtnCmd_t inpOutData;
+  /*NCI_RESET_CMD*/
+  UINT8 nfc_hal_nfcc_get_reset_info[6][6] = {
+    {0x20, 0x00, 0x01, 0x00,},
+    {0x20, 0x01, 0x00,},
+    {0x20, 0x03, 0x03, 0x01, 0xA0, 0x1A},
+    {0x20, 0x03, 0x03, 0x01, 0xA0, 0x1B},
+    {0x20, 0x03, 0x03, 0x01, 0xA0, 0x1C},
+    {0x20, 0x03, 0x03, 0x01, 0xA0, 0x27}
+  };
+  UINT8 core_status = NCI_STATUS_FAILED;
+  UINT8 retry_count = 0, numOfCmds = 0;
+  UINT8 i = 0;
+  NFC_TRACE_ERROR0("Inside nfc_hal_nfcc_reset");
+
+  numOfCmds = sizeof(nfc_hal_nfcc_get_reset_info)/sizeof(nfc_hal_nfcc_get_reset_info[0]);
+  for(i=0; i < numOfCmds; i++) {
+    memset(&inpOutData, 0x00, sizeof(nfc_nci_ExtnCmd_t));
+    inpOutData.cmd_len = nfc_hal_nfcc_get_reset_info[i][2] + 3;
+    memcpy(inpOutData.p_cmd, (UINT8 *)&nfc_hal_nfcc_get_reset_info[i], inpOutData.cmd_len);
+    do {
+      core_status = nfc_cb.p_hal->ioctl(HAL_NFC_IOCTL_NCI_TRANSCEIVE, &inpOutData);
+    } while ((NCI_STATUS_OK != core_status) &&
+             (retry_count++ <= NFC_NFCC_INIT_MAX_RETRY));
+  }
+  return core_status;
+}
 #endif
 /*******************************************************************************
 **
@@ -2212,6 +2250,10 @@ void nfc_ncif_proc_reset_rsp (UINT8 *p, BOOLEAN is_ntf)
         {
             NFC_TRACE_DEBUG2 ("CORE_RESET_NTF 2 reason Unrecoverable Error status nfc_state : 0x%x : 0x%x", status ,nfc_cb.nfc_state);
             core_reset_init_num_buff = TRUE;
+            if(nfc_hal_nfcc_get_reset_info() != NCI_STATUS_OK)
+            {
+              NFC_TRACE_DEBUG0 ("failed to get reset ntf info");
+            }
             nfc_ncif_cmd_timeout();
         }
         else
@@ -2219,12 +2261,20 @@ void nfc_ncif_proc_reset_rsp (UINT8 *p, BOOLEAN is_ntf)
             NFC_TRACE_DEBUG1 ("CORE_RESET_NTF 1 nfc_state :0x%x ", nfc_cb.nfc_state);
             NFC_TRACE_DEBUG1 ("CORE_RESET_NTF 1 status :0x%x ", status);
             core_reset_init_num_buff = TRUE;
+            if(nfc_hal_nfcc_get_reset_info() != NCI_STATUS_OK)
+            {
+              NFC_TRACE_DEBUG0 ("failed to get reset ntf info");
+            }
             nfc_ncif_cmd_timeout();
         }
-    #else
+#else
         NFC_TRACE_DEBUG1 ("reset notification nfc_state :0x%x ", nfc_cb.nfc_state);
         NFC_TRACE_DEBUG1 ("reset notification!!:0x%x ", status);
         core_reset_init_num_buff = TRUE;
+        if(nfc_hal_nfcc_get_reset_info() != NCI_STATUS_OK)
+        {
+          NFC_TRACE_DEBUG0 ("failed to get reset ntf info");
+        }
         nfc_ncif_cmd_timeout();
 #endif
     }

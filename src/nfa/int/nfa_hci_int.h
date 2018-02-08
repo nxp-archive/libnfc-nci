@@ -518,6 +518,7 @@ typedef struct
     UINT32                          max_hci_session_id_read_count;       /*Count for maximum  session id retry value */
     UINT32                          max_nfcee_disc_timeout;              /*Config file timeout value for all the NFCEE to be discovered */
     tNFA_EE_INFO                    hci_ee_info[NFA_HCI_MAX_HOST_IN_NETWORK];
+    BOOLEAN                         IsApduPipeStatusNotCorrect;
 #endif
     UINT8                           type;                               /* Instruction type of incoming message */
     UINT8                           inst;                               /* Instruction of incoming message */
