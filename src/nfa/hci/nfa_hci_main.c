@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1528,7 +1528,7 @@ void nfa_hci_rsp_timeout (tNFA_HCI_EVENT_DATA *p_evt_data)
                     NFC_FlushData(nfa_hci_cb.conn_id);
                     msg_len = (((nfa_hci_cb.hci_packet_len +1) % 2) == 0)?1:2;
                     NFA_TRACE_DEBUG1 ("NxpNci: Queue is not empty: %d", msg_len);
-                    if((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_RW_POOL_ID)) != NULL)
+                    if((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_WIRED_POOL_ID)) != NULL)
                     {
                         p_buf->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
                         p_data = (UINT8 *) (p_buf + 1) + p_buf->offset;
@@ -1537,7 +1537,7 @@ void nfa_hci_rsp_timeout (tNFA_HCI_EVENT_DATA *p_evt_data)
                         memcpy(p_data, &temp, msg_len);
                         p_buf->len += msg_len;
                         NFC_SendData(nfa_hci_cb.conn_id, p_buf);
-                        // nfa_sys_start_timer (&nfa_hci_cb.timer, NFA_HCI_RSP_TIMEOUT_EVT, 3000);
+                        nfa_sys_start_timer (&nfa_hci_cb.timer, NFA_HCI_RSP_TIMEOUT_EVT, 3000);
                         nfa_hci_cb.hci_state = NFA_HCI_STATE_WAIT_RSP;
                         evt = 0;
                         nfa_hci_cb.IsChainedPacket = FALSE;
@@ -1548,7 +1548,7 @@ void nfa_hci_rsp_timeout (tNFA_HCI_EVENT_DATA *p_evt_data)
                 {
                     NFC_FlushData(nfa_hci_cb.conn_id);
                     /* send EVT_ABORT command */
-                    if((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_RW_POOL_ID)) != NULL)
+                    if((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_WIRED_POOL_ID)) != NULL)
                     {
                         NFA_TRACE_DEBUG0 ("EVT_ABORT sent");
                         p_buf->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;

@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -106,7 +106,6 @@ typedef struct _free_queue
     UINT16          max_cnt;       /* maximum number of buffers allocated at any time */
 } FREE_QUEUE_T;
 
-
 /* Buffer related defines
 */
 #if(NXP_EXTNS == TRUE)
@@ -122,8 +121,6 @@ typedef struct _free_queue
 #define BUF_STATUS_FREE     0
 #define BUF_STATUS_UNLINKED 1
 #define BUF_STATUS_QUEUED   2
-
-#define GKI_USE_DEFERED_ALLOC_BUF_POOLS
 
 /* Exception related structures (Used in debug mode only)
 */
@@ -145,8 +142,6 @@ typedef struct
     */
     /* The stack and stack size are not used on Windows
     */
-#if (!defined GKI_USE_DEFERED_ALLOC_BUF_POOLS && (GKI_USE_DYNAMIC_BUFFERS == FALSE))
-
 #if (GKI_NUM_FIXED_BUF_POOLS > 0)
     UINT8 bufpool0[(ALIGN_POOL(GKI_BUF0_SIZE) + BUFFER_PADDING_SIZE) * GKI_BUF0_MAX];
 #endif
@@ -209,74 +204,6 @@ typedef struct
 
 #if (GKI_NUM_FIXED_BUF_POOLS > 15)
     UINT8 bufpool15[(ALIGN_POOL(GKI_BUF15_SIZE) + BUFFER_PADDING_SIZE) * GKI_BUF15_MAX];
-#endif
-
-#else
-/* Definitions for dynamic buffer use */
-#if (GKI_NUM_FIXED_BUF_POOLS > 0)
-    UINT8 *bufpool0;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 1)
-    UINT8 *bufpool1;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 2)
-    UINT8 *bufpool2;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 3)
-    UINT8 *bufpool3;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 4)
-    UINT8 *bufpool4;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 5)
-    UINT8 *bufpool5;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 6)
-    UINT8 *bufpool6;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 7)
-    UINT8 *bufpool7;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 8)
-    UINT8 *bufpool8;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 9)
-    UINT8 *bufpool9;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 10)
-    UINT8 *bufpool10;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 11)
-    UINT8 *bufpool11;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 12)
-    UINT8 *bufpool12;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 13)
-    UINT8 *bufpool13;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 14)
-    UINT8 *bufpool14;
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 15)
-    UINT8 *bufpool15;
-#endif
-
 #endif
 
     UINT8  *OSStack[GKI_MAX_TASKS];         /* pointer to beginning of stack */

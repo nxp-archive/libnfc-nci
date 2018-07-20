@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@
 #define NXP_EN_PN553                    1
 #define NXP_EN_PN80T                    1
 #define NXP_KOS_VER                     (2U) /* NXP android version */
-#define NFC_NXP_MW_VERSION_MAJ          (9U) /* MW Major Version */
+#define NFC_NXP_MW_VERSION_MAJ          (10U) /* MW Major Version */
 #define NFC_NXP_MW_VERSION_MIN          (0U) /* MW Minor Version */
 #endif
 /* 0xE0 ~0xFF are proprietary status codes */
@@ -1520,6 +1520,17 @@ NFC_API extern void nfc_ncif_storeScreenState(UINT8 state);
 **
 *******************************************************************************/
 void NFC_EnableDisableHalLog(UINT8 type);
+
+/*******************************************************************************
+**
+** Function         NFC_SetRfParamsUpdatePref
+**
+** Description      This function is used to set the RF params update
+**                  preference for the next NFC ON.
+**
+*******************************************************************************/
+void NFC_SetRfParamsUpdatePref(BOOLEAN enable);
+
 #if((NFC_NXP_CHIP_TYPE != PN547C2) && (NFC_NXP_AID_MAX_SIZE_DYN == TRUE))
 /*******************************************************************************
 **

@@ -992,7 +992,6 @@ NFCSTATUS phTmlNfc_WriteAbort(void)
 NFCSTATUS phTmlNfc_IoCtl(phTmlNfc_ControlCode_t eControlCode)
 {
     NFCSTATUS wStatus = NFCSTATUS_SUCCESS;
-
     if (NULL == gpphTmlNfc_Context)
     {
         wStatus = NFCSTATUS_FAILED;
@@ -1035,7 +1034,7 @@ NFCSTATUS phTmlNfc_IoCtl(phTmlNfc_ControlCode_t eControlCode)
                     break;
                 }
 #if(NFC_NXP_ESE == TRUE)
-#if(ESE_SPI_FEATURE == TRUE)
+#if(ESE_SPI_FEATURE == TRUE || NXP_ESE_POWER_MGMT == TRUE)
            case phTmlNfc_e_SetJcopDwnldEnable:
            {
                wStatus = phTmlNfc_i2c_set_Jcop_dwnld_state(gpphTmlNfc_Context->pDevHandle, JCP_DWNLD_START);

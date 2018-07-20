@@ -1469,6 +1469,18 @@ tNFA_MW_VERSION NFA_GetMwVersion ()
     return mwVer;
 }
 
+/*******************************************************************************
+**
+** Function         NFA_SetRfParamsUpdatePref
+**
+** Description      This function is used to set the RF params update
+**                  preference for the next NFC ON.
+**
+*******************************************************************************/
+void NFA_SetRfParamsUpdatePref(BOOLEAN enable)
+{
+  NFC_SetRfParamsUpdatePref(enable);
+}
 #if(NFC_NXP_STAT_DUAL_UICC_EXT_SWITCH == TRUE)
 /*******************************************************************************
 **

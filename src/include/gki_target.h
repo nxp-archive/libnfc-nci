@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -162,11 +162,6 @@
 **
 ******************************************************************************/
 
-/* TRUE if GKI uses dynamic buffers. */
-#ifndef GKI_USE_DYNAMIC_BUFFERS
-#define GKI_USE_DYNAMIC_BUFFERS     FALSE
-#endif
-
 /* The size of the buffers in pool 0. */
 #ifndef GKI_BUF0_SIZE
 #define GKI_BUF0_SIZE               64
@@ -214,11 +209,7 @@
 
 /* The size of the buffers in pool 3. */
 #ifndef GKI_BUF3_SIZE
-#if(NXP_EXTNS == TRUE)
-#define GKI_BUF3_SIZE               (0xFFB0)
-#else
 #define GKI_BUF3_SIZE               2500
-#endif
 #endif
 
 /* The number of buffers in buffer pool 3. */

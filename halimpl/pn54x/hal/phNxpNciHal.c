@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 NXP Semiconductors
+ * Copyright (C) 2015-2018 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,6 +124,7 @@ static uint8_t gRecFwRetryCount; //variable to hold dummy FW recovery count
 static uint8_t write_unlocked_status = NFCSTATUS_SUCCESS;
 static uint8_t Rx_data[NCI_MAX_DATA_LEN];
 uint32_t timeoutTimerId = 0;
+static bool_t sIsRfUpdateReq = FALSE;
 phNxpNciHal_Sem_t config_data;
 
 phNxpNciClock_t phNxpNciClock={0, {0}};
@@ -1621,7 +1622,7 @@ retry_core_init:
     }
 
     retlen = 0;
-    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpRFConfigModified())
+    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpRFConfigModified() || sIsRfUpdateReq)
     {
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
         config_access = FALSE;
@@ -1642,7 +1643,7 @@ retry_core_init:
                 /*STATUS INVALID PARAM 0x09*/
                 if (status == 0x09) {
                     phNxpNciHalRFConfigCmdRecSequence();
-                    //NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+                    NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
                     break;
                 }
             } else
@@ -1657,10 +1658,22 @@ retry_core_init:
         if(status != NFCSTATUS_SUCCESS)
           NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
 
-        retlen = 0;
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
-        config_access = TRUE;
+        status = phNxpNciHal_set_china_region_configs();
+        if (status != NFCSTATUS_SUCCESS)
+        {
+            NXPLOG_NCIHAL_E("phNxpNciHal_set_china_region_configs failed");
+            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
+        }
 #endif
+    }
+
+    if((TRUE == fw_dwnld_flag) || (TRUE == setConfigAlways) || isNxpRFConfigModified())
+    {
+        retlen = 0;
+  #if(NFC_NXP_CHIP_TYPE != PN547C2)
+        config_access = TRUE;
+  #endif
         NXPLOG_NCIHAL_D ("Performing NAME_NXP_CORE_CONF_EXTN Settings");
         isfound = GetNxpByteArrayValue(NAME_NXP_CORE_CONF_EXTN,
                 (char *) buffer, bufflen, &retlen);
@@ -1809,14 +1822,7 @@ retry_core_init:
 
         }
 #endif
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-        status = phNxpNciHal_set_china_region_configs();
-        if (status != NFCSTATUS_SUCCESS)
-        {
-            NXPLOG_NCIHAL_E("phNxpNciHal_set_china_region_configs failed");
-            NXP_NCI_HAL_CORE_INIT_RECOVER(retry_core_init_cnt, retry_core_init);
-        }
-#endif
+
 #if(NFC_NXP_CHIP_TYPE == PN547C2)
         status = phNxpNciHal_uicc_baud_rate();
         if (status != NFCSTATUS_SUCCESS) {
@@ -3093,6 +3099,12 @@ int phNxpNciHal_ioctl(long arg, void *p_data)
     case HAL_NFC_IOCTL_DISABLE_HAL_LOG:
         status = phNxpLog_EnableDisableLogLevel(*(uint8_t*)p_data);
         break;
+    case HAL_NFC_IOCTL_SET_RF_UPDATE_PREF:
+        sIsRfUpdateReq = (*(uint8_t*)p_data)?TRUE:FALSE;
+        NXPLOG_NCIHAL_D("HAL_NFC_IOCTL_SET_RF_UPDATE_PREF: update %s \n",
+            sIsRfUpdateReq?"TRUE":"FALSE");
+        ret = 0;
+        break;
     default:
         NXPLOG_NCIHAL_E("%s : Wrong arg = %ld", __FUNCTION__, arg);
         break;
@@ -3534,7 +3546,7 @@ NFCSTATUS phNxpNciHal_set_china_region_configs(void)
     unsigned long rf_enable = FALSE;
     unsigned long cfg_blk_chk_enable = FALSE;
     int rf_val = 0;
-    int flag_send_tianjin_config=TRUE;
+    int flag_send_mifare_misc_config=TRUE;
     int flag_send_transit_config=TRUE;
     uint8_t retry_cnt =0;
     int enable_bit =0;
@@ -3559,17 +3571,17 @@ retry_send_ext:
     phNxpNciRfSet.isGetRfSetting = FALSE;
     if(phNxpNciRfSet.p_rx_data[3] != 0x00)
     {
-        NXPLOG_NCIHAL_E("GET_CONFIG_RSP is FAILED for CHINA TIANJIN");
+        NXPLOG_NCIHAL_E("GET_CONFIG_RSP is FAILED for RF_MISC_SETTINGS");
         return status;
     }
 
-    /* check if tianjin_rf_setting is required */
+    /* check if rf_misc_mifare_setting is required */
     rf_val = phNxpNciRfSet.p_rx_data[10];
-    isfound = (GetNxpNumValue(NAME_NXP_CHINA_TIANJIN_RF_ENABLED, (void *)&rf_enable, sizeof(rf_enable)));
+    isfound = (GetNxpNumValue(NAME_NXP_RF_MISC_MIFARE_ENABLED, (void *)&rf_enable, sizeof(rf_enable)));
     if(isfound >0)
     {
         enable_bit = rf_val & 0x40;
-#if(NXP_NFCC_MIFARE_TIANJIN == TRUE)
+#if(NXP_NFCC_RF_MISC_MIFARE == TRUE)
         if((enable_bit != 0x40) && (rf_enable == 1))
         {
             phNxpNciRfSet.p_rx_data[10] |= 0x40;   // Enable if it is disabled
@@ -3580,30 +3592,30 @@ retry_send_ext:
         }
         else
         {
-            flag_send_tianjin_config = FALSE;  // No need to change in RF setting
+            flag_send_mifare_misc_config = FALSE;  // No need to change in RF setting
         }
 #else
         {
            enable_bit = phNxpNciRfSet.p_rx_data[11] & 0x10;
            if((rf_enable == 1) && (enable_bit != 0x10))
            {
-               NXPLOG_NCIHAL_E("Setting Non-Mifare reader for china tianjin");
+               NXPLOG_NCIHAL_E("Setting config for Non-Mifare reader");
                phNxpNciRfSet.p_rx_data[11] |= 0x10;
            }else if ((rf_enable == 0) && (enable_bit == 0x10))
            {
-               NXPLOG_NCIHAL_E("Setting Non-Mifare reader for china tianjin");
+               NXPLOG_NCIHAL_E("Setting config for Non-Mifare reader");
                phNxpNciRfSet.p_rx_data[11] &= 0xEF;
            }
            else
            {
-               flag_send_tianjin_config = FALSE;
+               flag_send_mifare_misc_config = FALSE;
            }
         }
 #endif
     }
     /*check if china block number check is required*/
     rf_val = phNxpNciRfSet.p_rx_data[8];
-    isfound = (GetNxpNumValue(NAME_NXP_CHINA_BLK_NUM_CHK_ENABLE, (void *)&cfg_blk_chk_enable, sizeof(cfg_blk_chk_enable)));
+    isfound = (GetNxpNumValue(NAME_NXP_BLK_NUM_CHK_ENABLE, (void *)&cfg_blk_chk_enable, sizeof(cfg_blk_chk_enable)));
     if(isfound >0)
     {
         enable_blk_num_chk_bit = rf_val & 0x40;
@@ -3621,7 +3633,7 @@ retry_send_ext:
         }
     }
 
-    if(flag_send_tianjin_config || flag_send_transit_config)
+    if(flag_send_mifare_misc_config || flag_send_transit_config)
     {
         static uint8_t set_rf_cmd[] = {0x20, 0x02, 0x08, 0x01, 0xA0, 0x85, 0x04, 0x50, 0x08, 0x68, 0x00};
         memcpy(&set_rf_cmd[4],&phNxpNciRfSet.p_rx_data[5],7);

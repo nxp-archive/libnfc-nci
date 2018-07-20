@@ -100,7 +100,6 @@ static void gki_init_free_queue (UINT8 id, UINT16 size, UINT16 total, void *p_me
     return;
 }
 
-#ifdef GKI_USE_DEFERED_ALLOC_BUF_POOLS
 static BOOLEAN gki_alloc_free_queue(UINT8 id)
 {
     FREE_QUEUE_T  *Q;
@@ -133,7 +132,6 @@ static BOOLEAN gki_alloc_free_queue(UINT8 id)
     #endif
     return FALSE;
 }
-#endif
 
 /*******************************************************************************
 **
@@ -176,75 +174,6 @@ void gki_buffer_init(void)
 
     /* Use default from target.h */
     p_cb->pool_access_mask = GKI_DEF_BUFPOOL_PERM_MASK;
-
-#if (!defined GKI_USE_DEFERED_ALLOC_BUF_POOLS && (GKI_USE_DYNAMIC_BUFFERS == TRUE))
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 0)
-    p_cb->bufpool0 = (UINT8 *)GKI_os_malloc ((GKI_BUF0_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF0_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 1)
-    p_cb->bufpool1 = (UINT8 *)GKI_os_malloc ((GKI_BUF1_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF1_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 2)
-    p_cb->bufpool2 = (UINT8 *)GKI_os_malloc ((GKI_BUF2_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF2_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 3)
-    p_cb->bufpool3 = (UINT8 *)GKI_os_malloc ((GKI_BUF3_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF3_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 4)
-    p_cb->bufpool4 = (UINT8 *)GKI_os_malloc ((GKI_BUF4_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF4_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 5)
-    p_cb->bufpool5 = (UINT8 *)GKI_os_malloc ((GKI_BUF5_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF5_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 6)
-    p_cb->bufpool6 = (UINT8 *)GKI_os_malloc ((GKI_BUF6_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF6_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 7)
-    p_cb->bufpool7 = (UINT8 *)GKI_os_malloc ((GKI_BUF7_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF7_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 8)
-    p_cb->bufpool8 = (UINT8 *)GKI_os_malloc ((GKI_BUF8_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF8_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 9)
-    p_cb->bufpool9 = (UINT8 *)GKI_os_malloc ((GKI_BUF9_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF9_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 10)
-    p_cb->bufpool10 = (UINT8 *)GKI_os_malloc ((GKI_BUF10_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF10_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 11)
-    p_cb->bufpool11 = (UINT8 *)GKI_os_malloc ((GKI_BUF11_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF11_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 12)
-    p_cb->bufpool12 = (UINT8 *)GKI_os_malloc ((GKI_BUF12_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF12_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 13)
-    p_cb->bufpool13 = (UINT8 *)GKI_os_malloc ((GKI_BUF13_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF13_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 14)
-    p_cb->bufpool14 = (UINT8 *)GKI_os_malloc ((GKI_BUF14_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF14_MAX);
-#endif
-
-#if (GKI_NUM_FIXED_BUF_POOLS > 15)
-    p_cb->bufpool15 = (UINT8 *)GKI_os_malloc ((GKI_BUF15_SIZE + BUFFER_PADDING_SIZE) * GKI_BUF15_MAX);
-#endif
-
-#endif
-
 
 #if (GKI_NUM_FIXED_BUF_POOLS > 0)
     gki_init_free_queue(0, GKI_BUF0_SIZE, GKI_BUF0_MAX, p_cb->bufpool0);
@@ -406,14 +335,12 @@ void *GKI_getbuf (UINT16 size)
         Q = &p_cb->freeq[p_cb->pool_list[i]];
         if(Q->cur_cnt < Q->total)
         {
-        #ifdef GKI_USE_DEFERED_ALLOC_BUF_POOLS
             if(Q->p_first == 0 && gki_alloc_free_queue(i) != TRUE)
             {
                 GKI_TRACE_ERROR_0("GKI_getbuf() out of buffer");
                 GKI_enable();
                 return NULL;
             }
-        #endif
 
             if(Q->p_first == 0)
             {
@@ -523,10 +450,8 @@ void *GKI_getpoolbuf (UINT8 pool_id)
     Q = &p_cb->freeq[pool_id];
     if(Q->cur_cnt < Q->total)
     {
-#ifdef GKI_USE_DEFERED_ALLOC_BUF_POOLS
         if(Q->p_first == 0 && gki_alloc_free_queue(pool_id) != TRUE)
             return NULL;
-#endif
 
         if(Q->p_first == 0)
         {

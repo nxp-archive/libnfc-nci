@@ -92,9 +92,9 @@ UINT8 i2c_fragmentation_enabled = 0xff;
 
 #if (NFC_RW_ONLY == FALSE)
 #if ((NXP_EXTNS == TRUE) && (NXP_NFCC_P2P_ENABLED == TRUE))
-#define NFC_NUM_INTERFACE_MAP   2
+#define NFC_NUM_INTERFACE_MAP   3
 #else
-#define NFC_NUM_INTERFACE_MAP   1
+#define NFC_NUM_INTERFACE_MAP   2
 #endif
 #else
 #define NFC_NUM_INTERFACE_MAP   1
@@ -110,7 +110,14 @@ static const tNCI_DISCOVER_MAPS nfc_interface_mapping[NFC_NUM_INTERFACE_MAP] =
     }
 
 #if (NFC_RW_ONLY == FALSE)
-#if ((NXP_EXTNS == TRUE) && (NXP_NFCC_P2P_ENABLED == TRUE))
+#if (NXP_EXTNS == TRUE)
+    ,
+    {
+        NCI_PROTOCOL_MIFARE,
+        NCI_INTERFACE_MODE_POLL,
+        NCI_INTERFACE_MIFARE
+    }
+#if (NXP_NFCC_P2P_ENABLED == TRUE)
     ,
     /* this can not be set here due to 2079xB0 NFCC issues */
     {
@@ -118,6 +125,7 @@ static const tNCI_DISCOVER_MAPS nfc_interface_mapping[NFC_NUM_INTERFACE_MAP] =
         NCI_INTERFACE_MODE_POLL_N_LISTEN,
         NCI_INTERFACE_NFC_DEP
     }
+#endif
 #endif
 #endif
 };
@@ -1802,6 +1810,19 @@ void NFC_EnableDisableHalLog(UINT8 type)
     {
         nfc_cb.p_hal->ioctl(HAL_NFC_IOCTL_DISABLE_HAL_LOG ,(void*)&type);
     }
+}
+
+/*******************************************************************************
+**
+** Function         NFC_SetRfParamsUpdatePref
+**
+** Description      This function is used to set the RF params update
+**                  preference for the next NFC ON.
+**
+*******************************************************************************/
+void NFC_SetRfParamsUpdatePref(BOOLEAN enable)
+{
+  nfc_cb.p_hal->ioctl(HAL_NFC_IOCTL_SET_RF_UPDATE_PREF ,(void*)&enable);
 }
 #endif
 #if (BT_TRACE_VERBOSE == TRUE)

@@ -421,6 +421,7 @@ typedef UINT8 tNCI_INTF_TYPE;
 #define NCI_PROTOCOL_ISO_DEP            0x04
 #define NCI_PROTOCOL_NFC_DEP            0x05
 #if (NXP_EXTNS == TRUE)
+#define NCI_PROTOCOL_MIFARE             0x80
 #define NCI_PROTOCOL_ISO7816            0xA0
 #endif
 /**********************************************

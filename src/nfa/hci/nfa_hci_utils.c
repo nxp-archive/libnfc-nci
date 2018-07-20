@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -371,7 +371,7 @@ tNFA_STATUS nfa_hciu_send_msg (UINT8 pipe_id, UINT8 type, UINT8 instruction, UIN
         else if(nfa_hci_cb.IsLastEvtAbortFailed)
         {
             /* send EVT_ABORT command */
-            if((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_RW_POOL_ID)) != NULL)
+            if((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_WIRED_POOL_ID)) != NULL)
             {
                 p_buf->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
                 p_data = (UINT8 *) (p_buf + 1) + p_buf->offset;
@@ -386,7 +386,11 @@ tNFA_STATUS nfa_hciu_send_msg (UINT8 pipe_id, UINT8 type, UINT8 instruction, UIN
 
     while ((first_pkt == TRUE) || (msg_len != 0))
     {
+#if (NXP_EXTNS == TRUE)
+        if ((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_WIRED_POOL_ID)) != NULL)
+#else
         if ((p_buf = (BT_HDR *) GKI_getpoolbuf (NFC_RW_POOL_ID)) != NULL)
+#endif
         {
             p_buf->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
 

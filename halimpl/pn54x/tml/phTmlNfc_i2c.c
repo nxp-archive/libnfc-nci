@@ -480,7 +480,7 @@ NFCSTATUS phTmlNfc_i2c_set_p61_power_state(void *pDevHandle, long level)
     {
         return -1;
     }
-    ret = ioctl((intptr_t)pDevHandle, P61_SET_WIRED_ACCESS, (unsigned long) level);
+    ret = ioctl((intptr_t)pDevHandle, P61_SET_WIRED_ACCESS, (unsigned int) level);
     if(ret < 0)
     {
         NXPLOG_TML_E("%s : failed errno = 0x%x", __FUNCTION__, errno);

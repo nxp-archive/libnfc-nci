@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 NXP Semiconductors
+ * Copyright (C) 2015-2018 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,7 +77,7 @@
 #define COMPILATION_MW "PN547C2"
 #endif
 /* HAL Version number (Updated as per release) */
-#define NXP_MW_VERSION_MAJ  (9U)
+#define NXP_MW_VERSION_MAJ  (10U)
 #define NXP_MW_VERSION_MIN  (0U)
 
 #define GET_EEPROM_DATA (1U)

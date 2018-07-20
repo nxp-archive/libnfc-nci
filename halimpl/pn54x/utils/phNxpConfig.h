@@ -20,7 +20,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -90,8 +90,8 @@ int updateNxpRFConfigTimestamp();
 #define NAME_NXP_CORE_MFCKEY_SETTING "NXP_CORE_MFCKEY_SETTING"
 #define NAME_NXP_CORE_STANDBY        "NXP_CORE_STANDBY"
 #define NAME_NXP_NFC_PROFILE_EXTN    "NXP_NFC_PROFILE_EXTN"
-#define NAME_NXP_CHINA_TIANJIN_RF_ENABLED  "NXP_CHINA_TIANJIN_RF_ENABLED"
-#define NAME_NXP_CHINA_BLK_NUM_CHK_ENABLE  "NXP_CN_TRANSIT_BLK_NUM_CHECK_ENABLE"
+#define NAME_NXP_RF_MISC_MIFARE_ENABLED  "NXP_RF_MISC_MIFARE_ENABLED"
+#define NAME_NXP_BLK_NUM_CHK_ENABLE  "NXP_TRANSIT_BLK_NUM_CHECK_ENABLE"
 #if(NXP_ESE_POWER_MODE==TRUE)
 #define NAME_NXP_ESE_POWER_DH_CONTROL         "NXP_ESE_POWER_DH_CONTROL"
 #define NAME_NXP_ESE_POWER_EXT_PMU            "NXP_ESE_POWER_EXT_PMU"

@@ -44,6 +44,7 @@
 #if(NFC_NXP_CHIP_TYPE == PN547C2)
 #define NXP_ESE_WIRED_MODE_DISABLE_DISCOVERY   TRUE
 #define NXP_LEGACY_APDU_GATE                   TRUE
+#define NXP_ESE_POWER_MGMT                     FALSE
 
 #elif((NFC_NXP_CHIP_TYPE == PN548C2) || (NFC_NXP_CHIP_TYPE == PN551))
     #define NFC_NXP_TRIPLE_MODE_PROTECTION        TRUE
@@ -66,6 +67,7 @@
     #define NXP_ESE_FORCE_ENABLE                  TRUE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     FALSE
     #define NXP_ESE_TRANSIT_ENABLE                FALSE
+    #define NXP_ESE_POWER_MGMT                    FALSE
 #elif(NFC_NXP_CHIP_TYPE == PN553)
     #define NFC_NXP_TRIPLE_MODE_PROTECTION        FALSE
     #define NXP_ESE_FELICA_CLT                    FALSE
@@ -92,6 +94,7 @@
     #define NXP_ESE_FORCE_ENABLE                  FALSE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     TRUE
     #define NXP_ESE_TRANSIT_ENABLE                TRUE
+    #define NXP_ESE_POWER_MGMT                    TRUE
 #endif
 
 #else /*Else of #if(NFC_NXP_ESE == TRUE)*/
@@ -99,6 +102,7 @@
 #if(NFC_NXP_CHIP_TYPE == PN547C2)
 #define NXP_ESE_WIRED_MODE_DISABLE_DISCOVERY      FALSE
 #define NXP_LEGACY_APDU_GATE                      FALSE
+#define NXP_ESE_POWER_MGMT                        FALSE
 #endif
 
 #if((NFC_NXP_CHIP_TYPE == PN548C2) || (NFC_NXP_CHIP_TYPE == PN551))
@@ -118,6 +122,7 @@
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          FALSE
     #define NFC_NXP_GP_CONTINOUS_PROCESSING       FALSE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     FALSE
+    #define NXP_ESE_POWER_MGMT                    FALSE
 #elif(NFC_NXP_CHIP_TYPE == PN553)
     #define NFC_NXP_TRIPLE_MODE_PROTECTION        FALSE
     #define NXP_ESE_FELICA_CLT                    FALSE
@@ -140,6 +145,7 @@
     #define NFC_NXP_ESE_ETSI12_PROP_INIT          TRUE
     #define NFC_NXP_GP_CONTINOUS_PROCESSING       FALSE
     #define NFC_NXP_EXCLUDE_NV_MEM_DEPENDENCY     TRUE
+    #define NXP_ESE_POWER_MGMT                    FALSE
 #endif
 
 #endif /*End of #if(NFC_NXP_ESE == TRUE)*/

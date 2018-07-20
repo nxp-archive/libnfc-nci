@@ -1424,6 +1424,16 @@ NFC_API extern void  NFA_EnableDtamode (tNFA_eDtaModes eDtaMode);
 
 /*******************************************************************************
 **
+** Function         NFA_SetRfParamsUpdatePref
+**
+** Description      This function is used to set the RF params update
+**                  preference for the next NFC ON.
+**
+*******************************************************************************/
+NFC_API extern void NFA_SetRfParamsUpdatePref(BOOLEAN enable);
+
+/*******************************************************************************
+**
 ** Function:        NFA_GetMwVersion
 **
 ** Description:     This function gets the Middleware Version

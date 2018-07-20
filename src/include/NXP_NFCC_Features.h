@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 NXP Semiconductors
+ * Copyright (C) 2012-2018 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 
 #if(NFC_NXP_CHIP_TYPE == PN553)
 #define NXP_NFCC_I2C_READ_WRITE_IMPROVEMENT     TRUE
-#define NXP_NFCC_MIFARE_TIANJIN                 FALSE
+#define NXP_NFCC_RF_MISC_MIFARE                 FALSE
 #define NXP_NFCC_MW_RCVRY_BLK_FW_DNLD           TRUE
 #define NXP_NFCC_DYNAMIC_DUAL_UICC              FALSE
 #define NXP_NFCC_FW_WA                          TRUE
@@ -52,7 +52,7 @@
 #define NXP_NFCC_AID_MATCHING_PLATFORM_CONFIG   TRUE
 #define NXP_NFCC_DYNAMIC_DUAL_UICC              FALSE
 #define NXP_NFCC_ROUTING_BLOCK_BIT_PROP         TRUE
-#define NXP_NFCC_MIFARE_TIANJIN                 TRUE
+#define NXP_NFCC_RF_MISC_MIFARE                 TRUE
 #define NFC_NXP_STAT_DUAL_UICC_EXT_SWITCH       TRUE
 #define NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH    FALSE
 #define NXP_NFCC_SPI_FW_DOWNLOAD_SYNC           FALSE
@@ -71,7 +71,7 @@
 #define NXP_NFCC_AID_MATCHING_PLATFORM_CONFIG   TRUE
 #define NXP_NFCC_DYNAMIC_DUAL_UICC              FALSE
 #define NXP_NFCC_ROUTING_BLOCK_BIT_PROP         TRUE
-#define NXP_NFCC_MIFARE_TIANJIN                 TRUE
+#define NXP_NFCC_RF_MISC_MIFARE                 TRUE
 #define NFC_NXP_STAT_DUAL_UICC_EXT_SWITCH       TRUE
 #define NFC_NXP_STAT_DUAL_UICC_WO_EXT_SWITCH    FALSE
 #define NXP_NFCC_SPI_FW_DOWNLOAD_SYNC           FALSE
@@ -88,7 +88,7 @@
 #elif(NFC_NXP_CHIP_TYPE  == PN547C2)
 #define NXP_NFCC_I2C_READ_WRITE_IMPROVEMENT     FALSE
 #define NXP_NFCC_AID_MATCHING_PLATFORM_CONFIG   TRUE
-#define NXP_NFCC_MIFARE_TIANJIN                 TRUE
+#define NXP_NFCC_RF_MISC_MIFARE                 TRUE
 #define NXP_NFCC_SPI_FW_DOWNLOAD_SYNC           FALSE
 #define NXP_HW_ANTENNA_LOOP4_SELF_TEST          TRUE
 #define NXP_NFCEE_REMOVED_NTF_RECOVERY          TRUE

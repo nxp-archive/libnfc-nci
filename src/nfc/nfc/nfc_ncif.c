@@ -436,7 +436,7 @@ UINT8 nfc_hal_nfcc_get_reset_info(void) {
   for(i=0; i < numOfCmds; i++) {
     memset(&inpOutData, 0x00, sizeof(nfc_nci_ExtnCmd_t));
     inpOutData.cmd_len = nfc_hal_nfcc_get_reset_info[i][2] + 3;
-    memcpy(inpOutData.p_cmd, (UINT8 *)&nfc_hal_nfcc_get_reset_info[i], inpOutData.cmd_len);
+    inpOutData.p_cmd = nfc_hal_nfcc_get_reset_info[i];
     do {
       core_status = nfc_cb.p_hal->ioctl(HAL_NFC_IOCTL_NCI_TRANSCEIVE, &inpOutData);
     } while ((NCI_STATUS_OK != core_status) &&

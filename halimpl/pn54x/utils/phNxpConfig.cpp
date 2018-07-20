@@ -20,7 +20,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015-2018 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -511,9 +511,9 @@ CNfcConfig& CNfcConfig::GetInstance()
         theInstance.readConfig(strPath.c_str(), true);
 #if(NXP_EXTNS == TRUE)
         readOptionalConfig("brcm");
-        theInstance.readNxpTransitConfig(transit_config_path);
         theInstance.readNxpRFConfig(nxp_rf_config_path);
         theInstance.readConfig(default_common_config_path, false);
+        theInstance.readNxpTransitConfig(transit_config_path);
 #endif
     }
     return theInstance;
@@ -776,7 +776,7 @@ bool CNfcConfig::isAllowed(const char* name)
             (token.find("UICC_LISTEN_TECH_MASK") != std::string::npos)  ||
             (token.find("POLLING_TECH_MASK") != std::string::npos)      ||
             (token.find("NXP_RF_CONF_BLK") != std::string::npos)        ||
-            (token.find("NXP_CN_TRANSIT_BLK_NUM_CHECK_ENABLE") != std::string::npos) ||
+            (token.find("NXP_TRANSIT_BLK_NUM_CHECK_ENABLE") != std::string::npos) ||
             (token.find("NXP_FWD_FUNCTIONALITY_ENABLE") != std::string::npos))
 
     {
