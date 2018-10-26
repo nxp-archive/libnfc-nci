@@ -93,7 +93,7 @@
 #define NXP_EN_PN553                    1
 #define NXP_EN_PN80T                    1
 #define NXP_KOS_VER                     (2U) /* NXP android version */
-#define NFC_NXP_MW_VERSION_MAJ          (10U) /* MW Major Version */
+#define NFC_NXP_MW_VERSION_MAJ          (11U) /* MW Major Version */
 #define NFC_NXP_MW_VERSION_MIN          (0U) /* MW Minor Version */
 #endif
 /* 0xE0 ~0xFF are proprietary status codes */
