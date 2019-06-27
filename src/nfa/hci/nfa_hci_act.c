@@ -52,6 +52,7 @@
 #include "nfa_hci_defs.h"
 #if (NXP_EXTNS == TRUE )
 #include "nfa_ee_int.h"
+#include "nfc_int.h"
 #endif
 
 /* Static local functions       */
@@ -1417,6 +1418,8 @@ void nfa_hci_handle_admin_gate_cmd (UINT8 *p_data)
                 nfa_hci_cb.reset_host[source_host - NFA_HCI_HOST_ID_UICC0] = source_host;
             }
 #if (NXP_EXTNS == TRUE)
+            nfc_cb.bBlockWiredMode = FALSE;
+            nfc_cb.bBlkPwrlinkAndModeSetCmd = FALSE;
             nfa_hciu_send_msg (NFA_HCI_ADMIN_PIPE, NFA_HCI_RESPONSE_TYPE, response, rsp_len, &data);
             nfa_hciu_set_nfceeid_config_mask(NFA_HCI_CLEAR_CONFIG_EVENT ,source_host);
             nfa_hciu_set_nfceeid_poll_mask(NFA_HCI_CLEAR_CONFIG_EVENT ,source_host);

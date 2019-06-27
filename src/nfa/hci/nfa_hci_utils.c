@@ -1332,7 +1332,7 @@ void nfa_hciu_set_nfceeid_config_mask(UINT8 event, UINT8 host_id)
 *******************************************************************************/
 void nfa_hciu_set_nfceeid_poll_mask(UINT8 event, UINT8 host_id)
 {
-    NFA_TRACE_DEBUG1 ("nfa_hciu_set_nfceeid_config_mask: %x", host_id);
+    NFA_TRACE_DEBUG1 ("nfa_hciu_set_nfceeid_poll_mask: %x", host_id);
     UINT8 xx;
     for(xx=0; xx < NFA_HCI_MAX_HOST_IN_NETWORK; xx++)
     {
