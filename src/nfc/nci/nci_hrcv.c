@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015,2017,2019 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -387,6 +387,15 @@ void nci_proc_ee_management_rsp (BT_HDR *p_msg)
         else
         {
             nfc_cb.bIssueModeSetCmd = FALSE;
+#if(NXP_ESE_DUAL_MODE_PRIO_SCHEME == NXP_ESE_WIRED_MODE_RESUME)
+            if((nfc_cb.bBlockWiredMode))
+            {
+                nfc_cb.bSetmodeOnReq = FALSE;
+                nfc_cb.bBlockWiredMode = FALSE;
+                nfc_cb.bCeActivatedeSE = FALSE;
+                nfc_ncif_allow_dwp_transmission();
+            }
+#endif
         }
 #endif
         break;

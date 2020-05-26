@@ -19,7 +19,7 @@
  *
  *  The original Work has been changed by NXP Semiconductors.
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright (C) 2015, 2017-2019 NXP Semiconductors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -468,6 +468,7 @@ typedef UINT8 tNCI_DISCOVERY_TYPE;
 #define NCI_ROUTE_TAG_PROTO             0x01        /* Protocol based routing  */
 #define NCI_ROUTE_TAG_AID               0x02        /* AID routing */
 
+#define NCI_ROUTE_PWR_STATE_DEFAULT     0x00        /* Default power state */
 #define NCI_ROUTE_PWR_STATE_ON          0x01        /* The device is on */
 #define NCI_ROUTE_PWR_STATE_SWITCH_OFF  0x02        /* The device is switched off */
 #define NCI_ROUTE_PWR_STATE_BATT_OFF    0x04        /* The device's battery is removed */
